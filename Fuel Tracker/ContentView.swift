@@ -6,30 +6,77 @@
 //
 
 import SwiftUI
+import Combine
 
-struct Tank: Identifiable {
+// Base Tank class
+class Tank: Identifiable, ObservableObject {
     let id = UUID()
     let name: String
-    var gallons: Double
+    @Published var gallons: Double
+    let capacity: Double
+    let maxFuelHawkReading: Double
+    
+    init(name: String, capacity: Double, initialGallons: Double, maxFuelHawkReading: Double) {
+        self.name = name
+        self.capacity = capacity
+        self.gallons = initialGallons
+        self.maxFuelHawkReading = maxFuelHawkReading
+    }
+    
+    // Default conversion (to be overridden)
+    func convertFuelHawk(_ reading: Double) -> Double {
+        return 0
+    }
+}
+
+// Main tank subclass with its own conversion formula
+class MainTank: Tank {
+    init(name: String, initialGallons: Double) {
+        super.init(name: name, capacity: 25, initialGallons: initialGallons, maxFuelHawkReading: 13.5)
+    }
+    
+    override func convertFuelHawk(_ reading: Double) -> Double {
+        if reading == 0 { return 0 }
+        if reading == 13.5 { return 25 }
+        return -0.0838 * reading * reading + 2.95 * reading + 0.356
+    }
+}
+
+// Aux tank subclass with its own conversion formula
+class AuxTank: Tank {
+    init(name: String, initialGallons: Double) {
+        super.init(name: name, capacity: 17, initialGallons: initialGallons, maxFuelHawkReading: 13)
+    }
+    
+    override func convertFuelHawk(_ reading: Double) -> Double {
+        if reading == 0 { return 0 }
+        if reading == 13.0 { return 17 }
+        return -0.013 * reading * reading + 1.49 * reading - 0.0792
+    }
 }
 
 class FuelViewModel: ObservableObject {
     @Published var tanks: [Tank] = [
-        Tank(name: "LT", gallons: 12),
-        Tank(name: "LM", gallons: 15),
-        Tank(name: "RM", gallons: 17),
-        Tank(name: "RT", gallons: 13)
+        AuxTank(name: "LT", initialGallons: 12),
+        MainTank(name: "LM", initialGallons: 15),
+        MainTank(name: "RM", initialGallons: 17),
+        AuxTank(name: "RT", initialGallons: 13)
     ]
     @Published var lastActiveTankIndex: Int? = nil
     @Published var lastFromIndex: Int? = nil
     @Published var lastToIndex: Int? = nil
     @Published var lastUsedAmount: Double? = nil
     @Published var lastSwitchDate: Date? = nil
-        
-    func convertFuelHawk(_ reading: Double) -> Double {
-        if reading == 0 { return 0 }
-        if reading == 13.5 { return 25 }
-        return -0.0838 * reading * reading + 2.95 * reading + 0.356
+    @Published var currentDate: Date = Date()
+    
+    private var timerSubscription: AnyCancellable?
+    
+    init() {
+        timerSubscription = Timer.publish(every: 5, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] now in
+                self?.currentDate = now
+            }
     }
     
     func switchToTank(index: Int, used: Double) {
@@ -41,6 +88,7 @@ class FuelViewModel: ObservableObject {
             lastToIndex = index
             lastUsedAmount = used
             lastSwitchDate = Date()
+            currentDate = Date()
         }
         lastActiveTankIndex = index
     }
@@ -54,7 +102,7 @@ class FuelViewModel: ObservableObject {
         else { return "" }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
-        let relative = formatter.localizedString(for: date, relativeTo: Date())
+        let relative = formatter.localizedString(for: date, relativeTo: currentDate)
         return "Last switched from \(tanks[from].name) to \(tanks[to].name) \(relative) at \(String(format: "%.1f", used)) gal used"
     }
 }
@@ -63,14 +111,18 @@ struct ContentView: View {
     @StateObject private var viewModel = FuelViewModel()
     @State private var showSwitchAlert = false
     @State private var selectedTankIndex: Int? = nil
-    @State private var usedInput: String = ""
+    @State private var usedInput: String = "5"
     
     @State private var sliderReading: Double = 0.0
     @State private var hasMovedSlider: Bool = false
     @State private var buttonText: String = "Reset Amount"
     
-    private let sliderRange: ClosedRange<Double> = 0...13.5
-    private let tickReadings: [Double] = [0,3,6,9,12]
+    private var currentTank: Tank? {
+        if let idx = viewModel.lastActiveTankIndex {
+            return viewModel.tanks[idx]
+        }
+        return nil
+    }
     
     var body: some View {
         VStack(spacing: 30) {
@@ -84,7 +136,7 @@ struct ContentView: View {
                     VStack {
                         Button(action: {
                             selectedTankIndex = index
-                            usedInput = ""
+                            usedInput = "5"
                             showSwitchAlert = true
                         }) {
                             ZStack {
@@ -101,55 +153,59 @@ struct ContentView: View {
                 }
             }
             
-            // Slider with dual scales
-            VStack(spacing: 10) {
-                // Upper scale (gallons)
-                HStack {
-                    ForEach(tickReadings, id: \.self) { reading in
-                        let gallons = viewModel.convertFuelHawk(reading)
-                        Text(String(format: "%.0f", gallons))
+            // Slider with dual scales based on current tank
+            if let tank = currentTank {
+                let tickerRange = Array(stride(from: 0.0, through: tank.maxFuelHawkReading, by: tank.maxFuelHawkReading / 4))
+                // Slider with dual scales
+                VStack(spacing: 10) {
+                    // Upper scale (gallons)
+                    HStack {
+                        ForEach(tickerRange, id: \.self) { reading in
+                            let gallons = tank.convertFuelHawk(reading)
+                            Text(String(format: "%.0f", gallons))
+                                .frame(maxWidth: .infinity)
+                                .font(.caption2)
+                        }
+                        Text("gal").font(.caption2).frame(width:30)
+                    }
+                    // Slider
+                    Slider(value: $sliderReading, in: 0...tank.maxFuelHawkReading, step: 0.1, onEditingChanged: { editing in
+                        if editing {
+                            hasMovedSlider = true
+                        }
+                    })
+                    
+                    // Lower scale (FuelHawk)
+                    HStack {
+                        ForEach(tickerRange, id: \.self) { reading in
+                            Text(String(format: "%.0f", reading))
+                                .frame(maxWidth: .infinity)
+                                .font(.caption2)
+                        }
+                        Text("Fuel\nHawk").font(.caption2).frame(width:30)
+                    }
+                    
+                    Text(String(format:"%.1f FuelHawk / %.1f gallons", sliderReading, tank.convertFuelHawk(sliderReading)))
+                    
+                    // Reset button
+                    Button(action: {
+                        if let idx = viewModel.lastActiveTankIndex {
+                            let newGallons = tank.convertFuelHawk(sliderReading)
+                            viewModel.tanks[idx].gallons = newGallons
+                            hasMovedSlider = false
+                        }
+                    }) {
+                        Text("Reset Amount")
                             .frame(maxWidth: .infinity)
-                            .font(.caption2)
+                            .padding()
+                            .background(hasMovedSlider ? Color.blue : Color.gray)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
                     }
-                    Text("gal").font(.caption2).frame(width:30)
+                    .disabled(!hasMovedSlider || viewModel.lastActiveTankIndex == nil)
                 }
-                // Slider
-                Slider(value: $sliderReading, in: sliderRange, step: 0.1, onEditingChanged: { editing in
-                    if editing {
-                        hasMovedSlider = true
-                    }
-                })
-                
-                // Lower scale (FuelHawk)
-                HStack {
-                    ForEach(tickReadings, id: \.self) { reading in
-                        Text(String(format: "%.0f", reading))
-                            .frame(maxWidth: .infinity)
-                            .font(.caption2)
-                    }
-                    Text("Fuel\nHawk").font(.caption2).frame(width:30)
-                }
-                
-                Text(String(format:"%.1f FuelHawk / %.1f gallons", sliderReading, viewModel.convertFuelHawk(sliderReading)))
-
-                // Reset button
-                Button(action: {
-                    if let idx = viewModel.lastActiveTankIndex {
-                        let newGallons = viewModel.convertFuelHawk(sliderReading)
-                        viewModel.tanks[idx].gallons = newGallons
-                        hasMovedSlider = false
-                    }
-                }) {
-                    Text("Reset Amount")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(hasMovedSlider ? Color.blue : Color.gray)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                }
-                .disabled(!hasMovedSlider || viewModel.lastActiveTankIndex == nil)
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
             
             // Last switch info
             if !viewModel.lastSwitchText.isEmpty {
