@@ -112,10 +112,10 @@ struct ContentView: View {
     @State private var showSwitchAlert = false
     @State private var selectedTankIndex: Int? = nil
     @State private var usedInput: String = "5"
+    @State private var editingTankIndex: Int? = nil  // New state for edit mode
     
     @State private var sliderReading: Double = 0.0
     @State private var hasMovedSlider: Bool = false
-    @State private var buttonText: String = "Reset Amount"
     
     private var currentTank: Tank? {
         if let idx = viewModel.lastActiveTankIndex {
@@ -135,18 +135,33 @@ struct ContentView: View {
                 ForEach(viewModel.tanks.indices, id: \.self) { index in
                     VStack {
                         Button(action: {
-                            selectedTankIndex = index
-                            usedInput = "5"
-                            showSwitchAlert = true
+                            if editingTankIndex != index {
+                                selectedTankIndex = index
+                                usedInput = "5"
+                                showSwitchAlert = true
+                            }
                         }) {
                             ZStack {
                                 Circle()
-                                    .stroke(viewModel.lastActiveTankIndex == index ? Color.blue : Color.gray, lineWidth: 3)
+                                    .stroke(
+                                        editingTankIndex == index ? Color.red :
+                                            viewModel.lastActiveTankIndex == index ? Color.blue : Color.gray,
+                                        lineWidth: 3
+                                    )
                                     .frame(width: 80, height: 80)
                                 Text(String(format: "%.0f", viewModel.tanks[index].gallons))
                                     .font(.title)
                             }
                         }
+                        .simultaneousGesture(
+                            LongPressGesture(minimumDuration: 0.5)
+                                .onEnded { _ in
+                                    editingTankIndex = index
+                                    if let tank = viewModel.tanks[index] as? Tank {
+                                        sliderReading = tank.maxFuelHawkReading / 2  // Set initial slider value
+                                    }
+                                }
+                        )
                         Text(viewModel.tanks[index].name)
                             .font(.caption)
                     }
@@ -154,7 +169,8 @@ struct ContentView: View {
             }
             
             // Slider with dual scales based on current tank
-            if let tank = currentTank {
+            if let idx = editingTankIndex {
+                let tank = viewModel.tanks[idx]
                 let tickerRange = Array(stride(from: 0.0, through: tank.maxFuelHawkReading, by: tank.maxFuelHawkReading / 4))
                 // Slider with dual scales
                 VStack(spacing: 10) {
@@ -189,10 +205,11 @@ struct ContentView: View {
                     
                     // Reset button
                     Button(action: {
-                        if let idx = viewModel.lastActiveTankIndex {
+                        if let idx = editingTankIndex {
                             let newGallons = tank.convertFuelHawk(sliderReading)
                             viewModel.tanks[idx].gallons = newGallons
                             hasMovedSlider = false
+                            editingTankIndex = nil
                         }
                     }) {
                         Text("Reset Amount")
@@ -202,7 +219,7 @@ struct ContentView: View {
                             .foregroundColor(.white)
                             .cornerRadius(8)
                     }
-                    .disabled(!hasMovedSlider || viewModel.lastActiveTankIndex == nil)
+                    .disabled(!hasMovedSlider || editingTankIndex == nil)
                 }
                 .padding(.horizontal)
             }
