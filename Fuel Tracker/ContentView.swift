@@ -93,6 +93,10 @@ class FuelViewModel: ObservableObject {
         lastActiveTankIndex = index
     }
     
+    func totalRemainingGallons() -> Double {
+        return tanks.reduce(0) { $0 + $1.gallons }
+    }
+    
     var lastSwitchText: String {
         guard
             let from = lastFromIndex,
@@ -239,6 +243,8 @@ struct ContentView: View {
                     editingTankIndex: $editingTankIndex,
                 )
             }
+            
+            Text(String(format:"%.1f gallons remaining", viewModel.totalRemainingGallons()))
             
             // Last switch info
             if !viewModel.lastSwitchText.isEmpty {
