@@ -3,6 +3,7 @@ import SwiftUI
 struct TankEditor: View {
     let tank: Tank
     @Binding var showEditSheet: Bool
+    @EnvironmentObject var viewModel: FuelViewModel
     @State private var hasMovedSlider: Bool
     @State private var sliderReading: Double
 
@@ -61,6 +62,7 @@ struct TankEditor: View {
                     tank.gallons = tank.convertFuelHawk(sliderReading)
                     hasMovedSlider = false
                     showEditSheet = false
+                    viewModel.saveState()
                 }
                 .disabled(!hasMovedSlider)
                 .buttonStyle(.borderedProminent)

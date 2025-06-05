@@ -3,6 +3,17 @@ import Combine
 
 @MainActor
 class FuelViewModel: ObservableObject {
+    private struct StoredState: Codable {
+        var tankGallons: [Double]
+        var lastActiveTankIndex: Int?
+        var lastFromIndex: Int?
+        var lastToIndex: Int?
+        var lastSwitchDate: Date?
+        var totalUsedGallons: Double?
+    }
+
+    private let storageKey = "FuelTrackerState"
+
     @Published var tanks: [Tank] = [
         AuxTank(name: "LT", initialGallons: 12),
         MainTank(name: "LM", initialGallons: 15),
@@ -25,6 +36,7 @@ class FuelViewModel: ObservableObject {
             .sink { [weak self] now in
                 self?.currentDate = now
             }
+        loadState()
     }
 
     deinit {
@@ -43,6 +55,7 @@ class FuelViewModel: ObservableObject {
             currentDate = Date.now
         }
         lastActiveTankIndex = index
+        saveState()
     }
 
     func totalRemainingGallons() -> Double {
@@ -68,5 +81,33 @@ class FuelViewModel: ObservableObject {
 
     func stopEditingTank() {
         editingTankIndex = nil
+    }
+
+    func saveState() {
+        let state = StoredState(
+            tankGallons: tanks.map { $0.gallons },
+            lastActiveTankIndex: lastActiveTankIndex,
+            lastFromIndex: lastFromIndex,
+            lastToIndex: lastToIndex,
+            lastSwitchDate: lastSwitchDate,
+            totalUsedGallons: totalUsedGallons
+        )
+        if let data = try? JSONEncoder().encode(state) {
+            UserDefaults.standard.set(data, forKey: storageKey)
+        }
+    }
+
+    func loadState() {
+        guard let data = UserDefaults.standard.data(forKey: storageKey) else { return }
+        if let state = try? JSONDecoder().decode(StoredState.self, from: data) {
+            for (index, gallons) in state.tankGallons.enumerated() where tanks.indices.contains(index) {
+                tanks[index].gallons = gallons
+            }
+            lastActiveTankIndex = state.lastActiveTankIndex
+            lastFromIndex = state.lastFromIndex
+            lastToIndex = state.lastToIndex
+            lastSwitchDate = state.lastSwitchDate
+            totalUsedGallons = state.totalUsedGallons
+        }
     }
 }

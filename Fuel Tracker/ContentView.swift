@@ -77,6 +77,7 @@ struct ContentView: View {
                 
                 Button(action: {
                     viewModel.totalUsedGallons = nil
+                    viewModel.saveState()
                 }) {
                     Text("Reset")
                         .font(.caption)
@@ -105,6 +106,7 @@ struct ContentView: View {
                 tank: viewModel.tanks[viewModel.editingTankIndex!],
                 showEditSheet: $showEditSheet
             )
+            .environmentObject(viewModel)
             .onDisappear {
                 viewModel.stopEditingTank()
             }
