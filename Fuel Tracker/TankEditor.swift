@@ -36,7 +36,7 @@ struct TankEditor: View {
             }
 
             Slider(value: $sliderReading, in: 0...tank.maxFuelHawkReading, step: 0.1)
-                .onChange(of: sliderReading) { _ in
+                .onChange(of: sliderReading, initial: false) { _, _ in
                     hasMovedSlider = true
                 }
 
@@ -49,7 +49,7 @@ struct TankEditor: View {
                 Text("Fuel\nHawk").font(.caption2).frame(width: 30)
             }
 
-            Text("\(sliderReading, specifier: \"%.1f\") FuelHawk / \(tank.convertFuelHawk(sliderReading), specifier: \"%.1f\") gallons")
+            Text(String(format: "%.1f FuelHawk / %.1f gallons", sliderReading, tank.convertFuelHawk(sliderReading)))
 
             HStack(spacing: 20) {
                 Button("Cancel") {
