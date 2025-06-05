@@ -11,9 +11,9 @@ class FuelViewModel: ObservableObject {
     @Published var lastActiveTankIndex: Int? = nil
     @Published var lastFromIndex: Int? = nil
     @Published var lastToIndex: Int? = nil
-    @Published var lastUsedAmount: Double? = nil
     @Published var lastSwitchDate: Date? = nil
     @Published var currentDate: Date = Date()
+    @Published var totalUsedGallons : Double? = nil
 
     private var timerSubscription: AnyCancellable?
 
@@ -25,13 +25,14 @@ class FuelViewModel: ObservableObject {
             }
     }
 
-    func switchToTank(index: Int, used: Double) {
+    func switchToTank(index: Int, newUsed: Double) {
         guard index >= 0 && index < tanks.count else { return }
         if let lastIndex = lastActiveTankIndex {
-            tanks[lastIndex].gallons = max(tanks[lastIndex].gallons - used, 0)
+            let tankUsed = newUsed - (totalUsedGallons ?? 0)
+            tanks[lastIndex].gallons = max(tanks[lastIndex].gallons - tankUsed, 0)
             lastFromIndex = lastIndex
             lastToIndex = index
-            lastUsedAmount = used
+            totalUsedGallons = newUsed
             lastSwitchDate = Date()
             currentDate = Date()
         }
@@ -46,7 +47,7 @@ class FuelViewModel: ObservableObject {
         guard
             let from = lastFromIndex,
             let to = lastToIndex,
-            let used = lastUsedAmount,
+            let used = totalUsedGallons,
             let date = lastSwitchDate
         else { return "" }
         let formatter = RelativeDateTimeFormatter()

@@ -56,6 +56,19 @@ struct ContentView: View {
                 )
             }
 
+            HStack(spacing: 20) {
+                Text(String(format: "%.1f gallons used", viewModel.totalUsedGallons ?? 0))
+                Button(action:{
+                    viewModel.totalUsedGallons = nil
+                }) {
+                    Text("Reset")
+                        .frame(maxWidth: 50)
+                        .padding()
+                        .background( Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                }
+            }
             Text(String(format: "%.1f gallons remaining", viewModel.totalRemainingGallons()))
 
             if !viewModel.lastSwitchText.isEmpty {
@@ -87,7 +100,7 @@ struct ContentView: View {
                         
                         Button("OK") {
                             if let idx = selectedTankIndex, let usedVal = Double(usedInput) {
-                                viewModel.switchToTank(index: idx, used: usedVal)
+                                viewModel.switchToTank(index: idx, newUsed: usedVal)
                             }
                             showInputSheet = false
                         }
@@ -98,6 +111,7 @@ struct ContentView: View {
                 .presentationDetents([.medium])
                 .background(Color(.systemBackground))
                 .onAppear {
+                    usedInput = String(format:"%.1f", (viewModel.totalUsedGallons ?? 0) + 5)
                     isInputFocused = true
                 }
             }
