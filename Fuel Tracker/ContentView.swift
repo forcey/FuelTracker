@@ -133,7 +133,7 @@ struct ContentView: View {
                 .presentationDetents([.medium])
                 .background(Color(.systemBackground))
                 .onAppear {
-                    usedInput = String(format:"%.1f", (viewModel.totalUsedGallons ?? 0) + 5)
+                    usedInput = String(format:"%.1f", viewModel.totalUsedGallons == nil ? 0 : viewModel.totalUsedGallons! + 5)
                     isInputFocused = true
                 }
             }
