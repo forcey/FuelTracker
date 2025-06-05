@@ -6,6 +6,8 @@ struct ContentView: View {
     @State private var selectedTankIndex: Int? = nil
     @State private var usedInput: String = "5"
     @State private var editingTankIndex: Int? = nil
+    @State private var showInputSheet = false
+    @FocusState private var isInputFocused: Bool
 
     var body: some View {
         VStack(spacing: 30) {
@@ -20,7 +22,7 @@ struct ContentView: View {
                             if editingTankIndex != index {
                                 selectedTankIndex = index
                                 usedInput = "5"
-                                showSwitchAlert = true
+                                showInputSheet = true
                             }
                         }) {
                             ZStack {
@@ -65,18 +67,40 @@ struct ContentView: View {
 
             Spacer()
         }
-        .alert(isPresented: $showSwitchAlert) {
-            Alert(
-                title: Text("Fuel Used"),
-                message: Text("Enter fuel used from previous tank (gallons)"),
-                primaryButton: .default(Text("OK"), action: {
-                    if let idx = selectedTankIndex, let usedVal = Double(usedInput) {
-                        viewModel.switchToTank(index: idx, used: usedVal)
+        .sheet(isPresented: $showInputSheet) {
+                VStack(spacing: 20) {
+                    Text("Enter Fuel Used")
+                        .font(.headline)
+                        .padding(.top)
+                    
+                    TextField("Gallons", text: $usedInput)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(.horizontal)
+                        .focused($isInputFocused)
+                    
+                    HStack(spacing: 20) {
+                        Button("Cancel") {
+                            showInputSheet = false
+                        }
+                        .buttonStyle(.bordered)
+                        
+                        Button("OK") {
+                            if let idx = selectedTankIndex, let usedVal = Double(usedInput) {
+                                viewModel.switchToTank(index: idx, used: usedVal)
+                            }
+                            showInputSheet = false
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
-                }),
-                secondaryButton: .cancel()
-            )
-        }
+                    .padding(.bottom)
+                }
+                .presentationDetents([.medium])
+                .background(Color(.systemBackground))
+                .onAppear {
+                    isInputFocused = true
+                }
+            }
         .padding()
         .onAppear {
             if viewModel.lastActiveTankIndex == nil {
