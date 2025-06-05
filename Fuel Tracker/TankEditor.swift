@@ -2,13 +2,13 @@ import SwiftUI
 
 struct TankEditor: View {
     let tank: Tank
-    @Binding var editingTankIndex: Int?
+    @Binding var showEditSheet: Bool
     @State private var hasMovedSlider: Bool
     @State private var sliderReading: Double
 
-    init(tank: Tank, editingTankIndex: Binding<Int?>) {
+    init(tank: Tank, showEditSheet: Binding<Bool>) {
         self.tank = tank
-        self._editingTankIndex = editingTankIndex
+        self._showEditSheet = showEditSheet
         self._hasMovedSlider = State(initialValue: false)
         self._sliderReading = State(initialValue: tank.maxFuelHawkReading / 2)
     }
@@ -44,21 +44,23 @@ struct TankEditor: View {
 
             Text(String(format: "%.1f FuelHawk / %.1f gallons", sliderReading, tank.convertFuelHawk(sliderReading)))
 
-            Button(action: {
-                let newGallons = tank.convertFuelHawk(sliderReading)
-                tank.gallons = newGallons
-                self.hasMovedSlider = false
-                editingTankIndex = nil
-            }) {
-                Text("Reset Amount")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(self.hasMovedSlider ? Color.blue : Color.gray)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
+            HStack(spacing: 20) {
+                Button("Cancel") {
+                    showEditSheet = false
+                }
+                .buttonStyle(.bordered)
+                
+                Button("Reset Amount") {
+                        let newGallons = tank.convertFuelHawk(sliderReading)
+                        tank.gallons = newGallons
+                        self.hasMovedSlider = false
+                        showEditSheet = false
+                }.disabled(!self.hasMovedSlider)
+                .buttonStyle(.borderedProminent)
             }
-            .disabled(!self.hasMovedSlider || editingTankIndex == nil)
         }
         .padding(.horizontal)
+        .presentationDetents([.medium])
+
     }
 }

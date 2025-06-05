@@ -2,11 +2,10 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var viewModel = FuelViewModel()
-    @State private var showSwitchAlert = false
     @State private var selectedTankIndex: Int? = nil
     @State private var usedInput: String = "5"
-    @State private var editingTankIndex: Int? = nil
-    @State private var showInputSheet = false
+    @State private var showEditSheet = false
+    @State private var showSwitchSheet = false
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
@@ -19,16 +18,16 @@ struct ContentView: View {
                 ForEach(viewModel.tanks.indices, id: \.self) { index in
                     VStack {
                         Button(action: {
-                            if editingTankIndex != index {
+                            if viewModel.editingTankIndex != index {
                                 selectedTankIndex = index
                                 usedInput = "5"
-                                showInputSheet = true
+                                showSwitchSheet = true
                             }
                         }) {
                             ZStack {
                                 Circle()
                                     .stroke(
-                                        editingTankIndex == index ? Color.red :
+                                        viewModel.editingTankIndex == index ? Color.red :
                                             viewModel.lastActiveTankIndex == index ? Color.blue : Color.gray,
                                         lineWidth: 3
                                     )
@@ -40,20 +39,14 @@ struct ContentView: View {
                         .simultaneousGesture(
                             LongPressGesture(minimumDuration: 0.5)
                                 .onEnded { _ in
-                                    editingTankIndex = index
+                                    viewModel.startEditingTank(index: index)
+                                    showEditSheet = true
                                 }
                         )
                         Text(viewModel.tanks[index].name)
                             .font(.caption)
                     }
                 }
-            }
-
-            if let idx = editingTankIndex {
-                TankEditor(
-                    tank: viewModel.tanks[idx],
-                    editingTankIndex: $editingTankIndex
-                )
             }
 
             HStack(spacing: 20) {
@@ -80,7 +73,16 @@ struct ContentView: View {
 
             Spacer()
         }
-        .sheet(isPresented: $showInputSheet) {
+        .sheet(isPresented: $showEditSheet) {
+            TankEditor(
+                tank: viewModel.tanks[viewModel.editingTankIndex!],
+                showEditSheet: $showEditSheet
+            )
+            .onDisappear {
+                viewModel.stopEditingTank()
+            }
+        }
+        .sheet(isPresented: $showSwitchSheet) {
                 VStack(spacing: 20) {
                     Text("Enter Fuel Used")
                         .font(.headline)
@@ -94,7 +96,7 @@ struct ContentView: View {
                     
                     HStack(spacing: 20) {
                         Button("Cancel") {
-                            showInputSheet = false
+                            showSwitchSheet = false
                         }
                         .buttonStyle(.bordered)
                         
@@ -102,7 +104,7 @@ struct ContentView: View {
                             if let idx = selectedTankIndex, let usedVal = Double(usedInput) {
                                 viewModel.switchToTank(index: idx, newUsed: usedVal)
                             }
-                            showInputSheet = false
+                            showSwitchSheet = false
                         }
                         .buttonStyle(.borderedProminent)
                     }
