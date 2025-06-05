@@ -107,14 +107,80 @@ class FuelViewModel: ObservableObject {
     }
 }
 
+// TankEditor component
+struct TankEditor: View {
+    let tank: Tank
+    @Binding var editingTankIndex: Int?
+    @State private var hasMovedSlider: Bool
+    @State private var sliderReading: Double
+    
+    init(tank: Tank, editingTankIndex: Binding<Int?>) {
+        self.tank = tank
+        self._editingTankIndex = editingTankIndex
+        self._hasMovedSlider = State(initialValue: false)
+        self._sliderReading = State(initialValue: tank.maxFuelHawkReading / 2)
+    }
+    
+    var body: some View {
+        let tickerRange = Array(stride(from: 0.0, through: tank.maxFuelHawkReading, by: tank.maxFuelHawkReading / 4))
+        
+        VStack(spacing: 10) {
+            // Upper scale (gallons)
+            HStack {
+                ForEach(tickerRange, id: \.self) { reading in
+                    let gallons = tank.convertFuelHawk(reading)
+                    Text(String(format: "%.0f", gallons))
+                        .frame(maxWidth: .infinity)
+                        .font(.caption2)
+                }
+                Text("gal").font(.caption2).frame(width:30)
+            }
+            
+            // Slider
+            Slider(value: $sliderReading, in: 0...tank.maxFuelHawkReading, step: 0.1, onEditingChanged: { editing in
+                if editing {
+                    self.hasMovedSlider = true
+                }
+            })
+            
+            // Lower scale (FuelHawk)
+            HStack {
+                ForEach(tickerRange, id: \.self) { reading in
+                    Text(String(format: "%.0f", reading))
+                        .frame(maxWidth: .infinity)
+                        .font(.caption2)
+                }
+                Text("Fuel\nHawk").font(.caption2).frame(width:30)
+            }
+            
+            Text(String(format:"%.1f FuelHawk / %.1f gallons", sliderReading, tank.convertFuelHawk(sliderReading)))
+            
+            // Reset button
+            Button(action: {
+                let newGallons = tank.convertFuelHawk(sliderReading)
+                tank.gallons = newGallons
+                self.hasMovedSlider = false
+                editingTankIndex = nil
+            }) {
+                Text("Reset Amount")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(self.hasMovedSlider ? Color.blue : Color.gray)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+            }
+            .disabled(!self.hasMovedSlider || editingTankIndex == nil)
+        }
+        .padding(.horizontal)
+    }
+}
+
 struct ContentView: View {
     @StateObject private var viewModel = FuelViewModel()
     @State private var showSwitchAlert = false
     @State private var selectedTankIndex: Int? = nil
     @State private var usedInput: String = "5"
-    @State private var editingTankIndex: Int? = nil  // New state for edit mode
-    
-    @State private var sliderReading: Double = 0.0
+    @State private var editingTankIndex: Int? = nil
     @State private var hasMovedSlider: Bool = false
     
     private var currentTank: Tank? {
@@ -157,9 +223,7 @@ struct ContentView: View {
                             LongPressGesture(minimumDuration: 0.5)
                                 .onEnded { _ in
                                     editingTankIndex = index
-                                    if let tank = viewModel.tanks[index] as? Tank {
-                                        sliderReading = tank.maxFuelHawkReading / 2  // Set initial slider value
-                                    }
+                                    hasMovedSlider = false
                                 }
                         )
                         Text(viewModel.tanks[index].name)
@@ -168,60 +232,12 @@ struct ContentView: View {
                 }
             }
             
-            // Slider with dual scales based on current tank
+            // Tank Editor component
             if let idx = editingTankIndex {
-                let tank = viewModel.tanks[idx]
-                let tickerRange = Array(stride(from: 0.0, through: tank.maxFuelHawkReading, by: tank.maxFuelHawkReading / 4))
-                // Slider with dual scales
-                VStack(spacing: 10) {
-                    // Upper scale (gallons)
-                    HStack {
-                        ForEach(tickerRange, id: \.self) { reading in
-                            let gallons = tank.convertFuelHawk(reading)
-                            Text(String(format: "%.0f", gallons))
-                                .frame(maxWidth: .infinity)
-                                .font(.caption2)
-                        }
-                        Text("gal").font(.caption2).frame(width:30)
-                    }
-                    // Slider
-                    Slider(value: $sliderReading, in: 0...tank.maxFuelHawkReading, step: 0.1, onEditingChanged: { editing in
-                        if editing {
-                            hasMovedSlider = true
-                        }
-                    })
-                    
-                    // Lower scale (FuelHawk)
-                    HStack {
-                        ForEach(tickerRange, id: \.self) { reading in
-                            Text(String(format: "%.0f", reading))
-                                .frame(maxWidth: .infinity)
-                                .font(.caption2)
-                        }
-                        Text("Fuel\nHawk").font(.caption2).frame(width:30)
-                    }
-                    
-                    Text(String(format:"%.1f FuelHawk / %.1f gallons", sliderReading, tank.convertFuelHawk(sliderReading)))
-                    
-                    // Reset button
-                    Button(action: {
-                        if let idx = editingTankIndex {
-                            let newGallons = tank.convertFuelHawk(sliderReading)
-                            viewModel.tanks[idx].gallons = newGallons
-                            hasMovedSlider = false
-                            editingTankIndex = nil
-                        }
-                    }) {
-                        Text("Reset Amount")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(hasMovedSlider ? Color.blue : Color.gray)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                    }
-                    .disabled(!hasMovedSlider || editingTankIndex == nil)
-                }
-                .padding(.horizontal)
+                TankEditor(
+                    tank: viewModel.tanks[idx],
+                    editingTankIndex: $editingTankIndex,
+                )
             }
             
             // Last switch info
