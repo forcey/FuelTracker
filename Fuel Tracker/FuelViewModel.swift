@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 
+@MainActor
 class FuelViewModel: ObservableObject {
     @Published var tanks: [Tank] = [
         AuxTank(name: "LT", initialGallons: 12),
@@ -26,16 +27,20 @@ class FuelViewModel: ObservableObject {
             }
     }
 
-    func switchToTank(index: Int, newUsed: Double) {
-        guard index >= 0 && index < tanks.count else { return }
+    deinit {
+        timerSubscription?.cancel()
+    }
+
+    func switchToTank(at index: Int, newTotalUsed: Double) {
+        guard tanks.indices.contains(index) else { return }
         if let lastIndex = lastActiveTankIndex {
-            let tankUsed = newUsed - (totalUsedGallons ?? 0)
+            let tankUsed = newTotalUsed - (totalUsedGallons ?? 0)
             tanks[lastIndex].gallons = max(tanks[lastIndex].gallons - tankUsed, 0)
             lastFromIndex = lastIndex
             lastToIndex = index
-            totalUsedGallons = newUsed
-            lastSwitchDate = Date()
-            currentDate = Date()
+            totalUsedGallons = newTotalUsed
+            lastSwitchDate = Date.now
+            currentDate = Date.now
         }
         lastActiveTankIndex = index
     }

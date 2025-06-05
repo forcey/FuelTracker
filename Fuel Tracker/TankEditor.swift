@@ -13,9 +13,17 @@ struct TankEditor: View {
         self._sliderReading = State(initialValue: tank.maxFuelHawkReading / 2)
     }
 
-    var body: some View {
-        let tickerRange = Array(stride(from: 0.0, through: tank.maxFuelHawkReading, by: tank.maxFuelHawkReading / 4))
+    private var tickerRange: [Double] {
+        Array(
+            stride(
+                from: 0.0,
+                through: tank.maxFuelHawkReading,
+                by: tank.maxFuelHawkReading / 4
+            )
+        )
+    }
 
+    var body: some View {
         VStack(spacing: 10) {
             HStack {
                 ForEach(tickerRange, id: \.self) { reading in
@@ -27,11 +35,10 @@ struct TankEditor: View {
                 Text("gal").font(.caption2).frame(width: 30)
             }
 
-            Slider(value: $sliderReading, in: 0...tank.maxFuelHawkReading, step: 0.1, onEditingChanged: { editing in
-                if editing {
-                    self.hasMovedSlider = true
+            Slider(value: $sliderReading, in: 0...tank.maxFuelHawkReading, step: 0.1)
+                .onChange(of: sliderReading, initial: false) { _, _ in
+                    hasMovedSlider = true
                 }
-            })
 
             HStack {
                 ForEach(tickerRange, id: \.self) { reading in
@@ -49,13 +56,13 @@ struct TankEditor: View {
                     showEditSheet = false
                 }
                 .buttonStyle(.bordered)
-                
+
                 Button("Reset Amount") {
-                        let newGallons = tank.convertFuelHawk(sliderReading)
-                        tank.gallons = newGallons
-                        self.hasMovedSlider = false
-                        showEditSheet = false
-                }.disabled(!self.hasMovedSlider)
+                    tank.gallons = tank.convertFuelHawk(sliderReading)
+                    hasMovedSlider = false
+                    showEditSheet = false
+                }
+                .disabled(!hasMovedSlider)
                 .buttonStyle(.borderedProminent)
             }
         }
