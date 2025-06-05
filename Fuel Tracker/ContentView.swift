@@ -8,6 +8,42 @@ struct ContentView: View {
     @State private var showSwitchSheet = false
     @FocusState private var isInputFocused: Bool
 
+    @ViewBuilder
+    private func tankButton(for index: Int) -> some View {
+        VStack {
+            Button {
+                if viewModel.editingTankIndex != index {
+                    selectedTankIndex = index
+                    usedInput = "5"
+                    showSwitchSheet = true
+                }
+            } label: {
+                ZStack {
+                    Circle()
+                        .stroke(
+                            viewModel.editingTankIndex == index ? Color.red :
+                                viewModel.lastActiveTankIndex == index ?
+                                Color.blue : Color.gray,
+                            lineWidth: 3
+                        )
+                        .frame(width: 80, height: 80)
+                    Text(String(format: "%.0f", viewModel.tanks[index].gallons))
+                        .font(.title)
+                }
+            }
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.5)
+                    .onEnded { _ in
+                        viewModel.startEditingTank(index: index)
+                        showEditSheet = true
+                    }
+            )
+
+            Text(viewModel.tanks[index].name)
+                .font(.caption)
+        }
+    }
+
     var body: some View {
         VStack(spacing: 30) {
             Text("Fuel Tracker")
@@ -16,36 +52,7 @@ struct ContentView: View {
 
             HStack(spacing: 20) {
                 ForEach(viewModel.tanks.indices, id: \.self) { index in
-                    VStack {
-                        Button(action: {
-                            if viewModel.editingTankIndex != index {
-                                selectedTankIndex = index
-                                usedInput = "5"
-                                showSwitchSheet = true
-                            }
-                        }) {
-                            ZStack {
-                                Circle()
-                                    .stroke(
-                                        viewModel.editingTankIndex == index ? Color.red :
-                                            viewModel.lastActiveTankIndex == index ? Color.blue : Color.gray,
-                                        lineWidth: 3
-                                    )
-                                    .frame(width: 80, height: 80)
-                                Text(String(format: "%.0f", viewModel.tanks[index].gallons))
-                                    .font(.title)
-                            }
-                        }
-                        .simultaneousGesture(
-                            LongPressGesture(minimumDuration: 0.5)
-                                .onEnded { _ in
-                                    viewModel.startEditingTank(index: index)
-                                    showEditSheet = true
-                                }
-                        )
-                        Text(viewModel.tanks[index].name)
-                            .font(.caption)
-                    }
+                    tankButton(for: index)
                 }
             }
 
@@ -121,8 +128,9 @@ struct ContentView: View {
                         .buttonStyle(.bordered)
                         
                         Button("OK") {
-                            if let idx = selectedTankIndex, let usedVal = Double(usedInput) {
-                                viewModel.switchToTank(index: idx, newUsed: usedVal)
+                            if let idx = selectedTankIndex,
+                               let usedVal = Double(usedInput) {
+                                viewModel.switchToTank(at: idx, newTotalUsed: usedVal)
                             }
                             showSwitchSheet = false
                         }
