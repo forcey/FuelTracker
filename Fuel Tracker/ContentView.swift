@@ -49,20 +49,40 @@ struct ContentView: View {
                 }
             }
 
-            HStack(spacing: 20) {
-                Text(String(format: "%.1f gallons used", viewModel.totalUsedGallons ?? 0))
-                Button(action:{
+            HStack(spacing: 40) {
+                VStack(alignment: .center, spacing: 4) {
+                    Text("Used")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(String(format: "%.1f", viewModel.totalUsedGallons ?? 0))
+                        .font(.title)
+                        .monospacedDigit()
+                }
+                
+                VStack(alignment: .center, spacing: 4) {
+                    Text("Remaining")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(String(format: "%.1f", viewModel.totalRemainingGallons()))
+                        .font(.title)
+                        .monospacedDigit()
+                }
+                
+                Button(action: {
                     viewModel.totalUsedGallons = nil
                 }) {
                     Text("Reset")
-                        .frame(maxWidth: 50)
-                        .padding()
-                        .background( Color.blue)
+                        .font(.caption)
+                        .padding(.horizontal)
+                        .padding(.vertical)
+                        .background(Color.blue)
                         .foregroundColor(.white)
-                        .cornerRadius(8)
+                        .cornerRadius(6)
                 }
+                .buttonStyle(.plain)
             }
-            Text(String(format: "%.1f gallons remaining", viewModel.totalRemainingGallons()))
+            .padding(.vertical, 8)
+            
 
             if !viewModel.lastSwitchText.isEmpty {
                 Text(viewModel.lastSwitchText)
