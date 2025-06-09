@@ -1,0 +1,2 @@
+test_commands:
+  - xcodebuild -project "Fuel Tracker.xcodeproj" -scheme "Fuel Tracker" -destination "platform=iOS Simulator,name=iPhone 14" test
