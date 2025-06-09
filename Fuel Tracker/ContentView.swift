@@ -56,7 +56,7 @@ struct ContentView: View {
                 }
             }
 
-            HStack(spacing: 40) {
+            HStack(spacing: 30) {
                 VStack(alignment: .center, spacing: 4) {
                     Text("Used")
                         .font(.caption)
@@ -74,24 +74,7 @@ struct ContentView: View {
                         .font(.title)
                         .monospacedDigit()
                 }
-                
-                Button(action: {
-                    viewModel.totalUsedGallons = nil
-                    viewModel.saveState()
-                }) {
-                    Text("Reset")
-                        .font(.caption)
-                        .padding(.horizontal)
-                        .padding(.vertical)
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(6)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.vertical, 8)
-
-            HStack(spacing: 40) {
+           
                 VStack(alignment: .center, spacing: 4) {
                     Text("Endurance")
                         .font(.caption)
@@ -99,6 +82,7 @@ struct ContentView: View {
                     Text(viewModel.enduranceText)
                         .font(.title)
                         .monospacedDigit()
+                        .foregroundColor(viewModel.enduranceHours < 1 ? .red : .primary)
                 }
 
                 VStack(alignment: .center, spacing: 4) {
@@ -108,11 +92,17 @@ struct ContentView: View {
                     Text(viewModel.enduranceMinusReserveText)
                         .font(.title)
                         .monospacedDigit()
+                        .foregroundColor(viewModel.enduranceHours < 1 ? .red : .primary)
                 }
             }
             .padding(.vertical, 8)
             
-
+            
+            Button("Reset Used"){
+                viewModel.totalUsedGallons = nil
+                viewModel.saveState()
+            }.buttonStyle(.bordered)
+            
             if !viewModel.lastSwitchText.isEmpty {
                 Text(viewModel.lastSwitchText)
                     .font(.caption)

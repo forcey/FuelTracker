@@ -63,7 +63,7 @@ class FuelViewModel: ObservableObject {
     }
 
     private func hoursElapsedSinceLastSwitch() -> Double {
-        guard let lastDate = lastSwitchDate else { return 0 }
+        guard let lastDate = lastSwitchDate, totalUsedGallons != nil else { return 0 }
         return currentDate.timeIntervalSince(lastDate) / 3600
     }
 
