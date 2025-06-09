@@ -37,7 +37,7 @@ final class Fuel_TrackerTests: XCTestCase {
         XCTAssertEqual(vm.tanks[0].gallons, 7, accuracy: 0.0001)
         XCTAssertEqual(vm.lastFromIndex, 0)
         XCTAssertEqual(vm.lastToIndex, 1)
-        XCTAssertEqual(vm.totalUsedGallons, 5, accuracy: 0.0001)
+        XCTAssertEqual(vm.totalUsedGallons!, 5, accuracy: 0.0001)
         XCTAssertEqual(vm.lastActiveTankIndex, 1)
     }
 }
