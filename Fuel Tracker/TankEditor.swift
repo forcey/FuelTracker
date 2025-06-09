@@ -52,6 +52,27 @@ struct TankEditor: View {
 
             Text(String(format: "%.1f FuelHawk / %.1f gallons", sliderReading, tank.convertFuelHawk(sliderReading)))
 
+            HStack(spacing: 10) {
+                Button("Empty") {
+                    tank.gallons = 0
+                    hasMovedSlider = false
+                    showEditSheet = false
+                    viewModel.saveState()
+                }
+                Button("Full") {
+                    tank.gallons = tank.capacity
+                    hasMovedSlider = false
+                    showEditSheet = false
+                    viewModel.saveState()
+                }
+                Button("All Tanks Full") {
+                    viewModel.fillAllTanks()
+                    hasMovedSlider = false
+                    showEditSheet = false
+                }
+            }
+            .buttonStyle(.bordered)
+
             HStack(spacing: 20) {
                 Button("Cancel") {
                     showEditSheet = false
