@@ -110,4 +110,11 @@ class FuelViewModel: ObservableObject {
             totalUsedGallons = state.totalUsedGallons
         }
     }
+
+    func fillAllTanks() {
+        for tank in tanks {
+            tank.gallons = tank.capacity
+        }
+        saveState()
+    }
 }
