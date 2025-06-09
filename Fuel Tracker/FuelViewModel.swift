@@ -62,6 +62,35 @@ class FuelViewModel: ObservableObject {
         tanks.reduce(0) { $0 + $1.gallons }
     }
 
+    private func hoursElapsedSinceLastSwitch() -> Double {
+        guard let lastDate = lastSwitchDate else { return 0 }
+        return currentDate.timeIntervalSince(lastDate) / 3600
+    }
+
+    var enduranceHours: Double {
+        let burnRate = 14.0
+        let totalHours = totalRemainingGallons() / burnRate
+        return max(totalHours - hoursElapsedSinceLastSwitch(), 0)
+    }
+
+    var enduranceMinusReserveHours: Double {
+        max(enduranceHours - 0.75, 0)
+    }
+
+    private func formatTime(hours: Double) -> String {
+        guard hours.isFinite && hours > 0 else { return "0:00" }
+        let totalMinutes = Int((hours * 60).rounded())
+        let h = totalMinutes / 60
+        let m = totalMinutes % 60
+        return String(format: "%d:%02d", h, m)
+    }
+
+    var enduranceText: String { formatTime(hours: enduranceHours) }
+
+    var enduranceMinusReserveText: String {
+        formatTime(hours: enduranceMinusReserveHours)
+    }
+
     var lastSwitchText: String {
         guard
             let from = lastFromIndex,

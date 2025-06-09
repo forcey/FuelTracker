@@ -40,4 +40,15 @@ final class Fuel_TrackerTests: XCTestCase {
         XCTAssertEqual(vm.totalUsedGallons!, 5, accuracy: 0.0001)
         XCTAssertEqual(vm.lastActiveTankIndex, 1)
     }
+
+    @MainActor
+    func testEnduranceCalculation() {
+        let vm = FuelViewModel()
+        vm.tanks.forEach { $0.gallons = 14 }
+        vm.currentDate = Date()
+        vm.lastSwitchDate = vm.currentDate.addingTimeInterval(-3600)
+        let expected = vm.totalRemainingGallons() / 14 - 1
+        XCTAssertEqual(vm.enduranceHours, expected, accuracy: 0.0001)
+        XCTAssertEqual(vm.enduranceMinusReserveHours, max(expected - 0.75, 0), accuracy: 0.0001)
+    }
 }

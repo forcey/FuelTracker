@@ -90,6 +90,27 @@ struct ContentView: View {
                 .buttonStyle(.plain)
             }
             .padding(.vertical, 8)
+
+            HStack(spacing: 40) {
+                VStack(alignment: .center, spacing: 4) {
+                    Text("Endurance")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(viewModel.enduranceText)
+                        .font(.title)
+                        .monospacedDigit()
+                }
+
+                VStack(alignment: .center, spacing: 4) {
+                    Text("-45 Reserve")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(viewModel.enduranceMinusReserveText)
+                        .font(.title)
+                        .monospacedDigit()
+                }
+            }
+            .padding(.vertical, 8)
             
 
             if !viewModel.lastSwitchText.isEmpty {
