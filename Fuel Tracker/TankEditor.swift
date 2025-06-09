@@ -33,7 +33,7 @@ struct TankEditor: View {
                         .frame(maxWidth: .infinity)
                         .font(.caption2)
                 }
-                Text("gal").font(.caption2).frame(width: 30)
+                Text("gal").font(.caption2).frame(width: 35)
             }
 
             Slider(value: $sliderReading, in: 0...tank.maxFuelHawkReading, step: 0.1)
@@ -47,7 +47,7 @@ struct TankEditor: View {
                         .frame(maxWidth: .infinity)
                         .font(.caption2)
                 }
-                Text("Fuel\nHawk").font(.caption2).frame(width: 30)
+                Text("Fuel\nHawk").font(.caption2).frame(width: 35)
             }
 
             Text(String(format: "%.1f FuelHawk / %.1f gallons", sliderReading, tank.convertFuelHawk(sliderReading)))
