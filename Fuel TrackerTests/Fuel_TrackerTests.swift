@@ -5,13 +5,39 @@
 //  Created by Todd Li on 6/1/25.
 //
 
-import Testing
+import XCTest
 @testable import Fuel_Tracker
 
-struct Fuel_TrackerTests {
+final class Fuel_TrackerTests: XCTestCase {
 
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+    func testMainTankConversion() {
+        let tank = MainTank(name: "Test", initialGallons: 0)
+        XCTAssertEqual(tank.convertFuelHawk(0), 0, accuracy: 0.0001)
+        XCTAssertEqual(tank.convertFuelHawk(tank.maxFuelHawkReading), tank.capacity, accuracy: 0.0001)
+        let reading = tank.maxFuelHawkReading / 2
+        let expected = -0.0838 * reading * reading + 2.95 * reading + 0.356
+        XCTAssertEqual(tank.convertFuelHawk(reading), expected, accuracy: 0.0001)
     }
 
+    func testAuxTankConversion() {
+        let tank = AuxTank(name: "Test", initialGallons: 0)
+        XCTAssertEqual(tank.convertFuelHawk(0), 0, accuracy: 0.0001)
+        XCTAssertEqual(tank.convertFuelHawk(tank.maxFuelHawkReading), tank.capacity, accuracy: 0.0001)
+        let reading = tank.maxFuelHawkReading / 2
+        let expected = -0.013 * reading * reading + 1.49 * reading - 0.0792
+        XCTAssertEqual(tank.convertFuelHawk(reading), expected, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testSwitchToTankUpdatesState() {
+        let vm = FuelViewModel()
+        vm.lastActiveTankIndex = 0
+        vm.totalUsedGallons = 0
+        vm.switchToTank(at: 1, newTotalUsed: 5)
+        XCTAssertEqual(vm.tanks[0].gallons, 7, accuracy: 0.0001)
+        XCTAssertEqual(vm.lastFromIndex, 0)
+        XCTAssertEqual(vm.lastToIndex, 1)
+        XCTAssertEqual(vm.totalUsedGallons!, 5, accuracy: 0.0001)
+        XCTAssertEqual(vm.lastActiveTankIndex, 1)
+    }
 }
