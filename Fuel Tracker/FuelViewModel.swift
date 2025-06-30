@@ -68,7 +68,7 @@ class FuelViewModel: ObservableObject {
     }
 
     var enduranceHours: Double {
-        let burnRate = 14.0
+        let burnRate = 12.0
         let totalHours = totalRemainingGallons() / burnRate
         return max(totalHours - hoursElapsedSinceLastSwitch(), 0)
     }
