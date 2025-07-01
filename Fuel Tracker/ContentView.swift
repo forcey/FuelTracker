@@ -12,7 +12,10 @@ struct ContentView: View {
     private func tankButton(for index: Int) -> some View {
         let tank = viewModel.tanks[index]
         let percent = max(min(tank.gallons / tank.capacity, 1), 0)
-
+        let color = viewModel.editingTankIndex == index ? Color.red :
+            viewModel.lastActiveTankIndex == index ?
+            Color.blue : Color.gray
+        
         VStack {
             Button {
                 if viewModel.editingTankIndex != index {
@@ -23,23 +26,20 @@ struct ContentView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .stroke(Color.gray.opacity(0.3), lineWidth: 8)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 3)
                         .frame(width: 80, height: 80)
-
+                    
                     Circle()
                         .trim(from: 0, to: percent)
                         .stroke(
-                            viewModel.editingTankIndex == index ? Color.red :
-                                viewModel.lastActiveTankIndex == index ?
-                                Color.blue : Color.green,
-                            style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                            color,
+                            style: StrokeStyle(lineWidth: 3, lineCap: .round)
                         )
                         .rotationEffect(.degrees(-90))
                         .frame(width: 80, height: 80)
-
-                    Text(String(format: "%.0f%%", percent * 100))
-                        .font(.title3)
-                        .bold()
+                    
+                    Text(String(format: "%.0f", viewModel.tanks[index].gallons))
+                        .font(.title)
                 }
             }
             .simultaneousGesture(
@@ -49,7 +49,7 @@ struct ContentView: View {
                         showEditSheet = true
                     }
             )
-
+            
             Text(viewModel.tanks[index].name)
                 .font(.caption)
         }
