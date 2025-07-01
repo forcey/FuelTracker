@@ -10,6 +10,12 @@ struct ContentView: View {
 
     @ViewBuilder
     private func tankButton(for index: Int) -> some View {
+        let tank = viewModel.tanks[index]
+        let percent = max(min(tank.gallons / tank.capacity, 1), 0)
+        let color = viewModel.editingTankIndex == index ? Color.red :
+            viewModel.lastActiveTankIndex == index ?
+            Color.blue : Color.gray
+        
         VStack {
             Button {
                 if viewModel.editingTankIndex != index {
@@ -20,13 +26,18 @@ struct ContentView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .stroke(
-                            viewModel.editingTankIndex == index ? Color.red :
-                                viewModel.lastActiveTankIndex == index ?
-                                Color.blue : Color.gray,
-                            lineWidth: 3
-                        )
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 3)
                         .frame(width: 80, height: 80)
+                    
+                    Circle()
+                        .trim(from: 0, to: percent)
+                        .stroke(
+                            color,
+                            style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                        )
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 80, height: 80)
+                    
                     Text(String(format: "%.0f", viewModel.tanks[index].gallons))
                         .font(.title)
                 }
@@ -38,7 +49,7 @@ struct ContentView: View {
                         showEditSheet = true
                     }
             )
-
+            
             Text(viewModel.tanks[index].name)
                 .font(.caption)
         }
