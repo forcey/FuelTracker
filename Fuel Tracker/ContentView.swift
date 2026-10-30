@@ -27,7 +27,6 @@ struct ContentView: View {
                 ZStack {
                     Circle()
                         .stroke(Color.gray.opacity(0.3), lineWidth: 3)
-                        .frame(width: 80, height: 80)
                     
                     Circle()
                         .trim(from: 0, to: percent)
@@ -36,11 +35,17 @@ struct ContentView: View {
                             style: StrokeStyle(lineWidth: 3, lineCap: .round)
                         )
                         .rotationEffect(.degrees(-90))
-                        .frame(width: 80, height: 80)
                     
                     Text(String(format: "%.0f", viewModel.tanks[index].gallons))
                         .font(.title)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .padding(6)
                 }
+                // Shrink to fit narrow screens (e.g. the outside display), up to 80pt.
+                .frame(maxWidth: 80)
+                .aspectRatio(1, contentMode: .fit)
+                .padding(2)
             }
             .simultaneousGesture(
                 LongPressGesture(minimumDuration: 0.5)
@@ -53,6 +58,7 @@ struct ContentView: View {
             Text(viewModel.tanks[index].name)
                 .font(.caption)
         }
+        .frame(maxWidth: .infinity)
     }
 
     var body: some View {
@@ -61,50 +67,70 @@ struct ContentView: View {
                 .font(.largeTitle)
                 .padding(.top)
 
-            HStack(spacing: 20) {
+            HStack(spacing: 8) {
                 ForEach(viewModel.tanks.indices, id: \.self) { index in
                     tankButton(for: index)
                 }
             }
 
-            HStack(spacing: 30) {
+            HStack(spacing: 8) {
                 VStack(alignment: .center, spacing: 4) {
                     Text("Used")
                         .font(.caption)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                         .foregroundColor(.secondary)
                     Text(String(format: "%.1f", viewModel.totalUsedGallons ?? 0))
                         .font(.title)
                         .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                 }
+                .frame(maxWidth: .infinity)
                 
                 VStack(alignment: .center, spacing: 4) {
                     Text("Remaining")
                         .font(.caption)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                         .foregroundColor(.secondary)
                     Text(String(format: "%.1f", viewModel.totalRemainingGallons()))
                         .font(.title)
                         .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                 }
+                .frame(maxWidth: .infinity)
            
                 VStack(alignment: .center, spacing: 4) {
                     Text("Endurance")
                         .font(.caption)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                         .foregroundColor(.secondary)
                     Text(viewModel.enduranceText)
                         .font(.title)
                         .monospacedDigit()
                         .foregroundColor(viewModel.enduranceHours < 1 ? .red : .primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                 }
+                .frame(maxWidth: .infinity)
 
                 VStack(alignment: .center, spacing: 4) {
                     Text("-45 Reserve")
                         .font(.caption)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                         .foregroundColor(.secondary)
                     Text(viewModel.enduranceMinusReserveText)
                         .font(.title)
                         .monospacedDigit()
                         .foregroundColor(viewModel.enduranceHours < 1 ? .red : .primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                 }
+                .frame(maxWidth: .infinity)
             }
             .padding(.vertical, 8)
             
