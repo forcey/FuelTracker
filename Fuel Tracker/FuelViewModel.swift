@@ -67,6 +67,12 @@ class FuelViewModel: ObservableObject {
         return currentDate.timeIntervalSince(lastDate) / 3600
     }
 
+    /// Whether endurance is counting down: starts at the first tank switch,
+    /// stops on Reset Used or when fuel runs out.
+    var isTimerRunning: Bool {
+        lastSwitchDate != nil && totalUsedGallons != nil && enduranceHours > 0
+    }
+
     var enduranceHours: Double {
         let burnRate = 12.0
         let totalHours = totalRemainingGallons() / burnRate

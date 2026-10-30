@@ -78,6 +78,21 @@ struct ContentView: View {
         .frame(maxWidth: .infinity)
     }
 
+    private var timerIndicator: some View {
+        let running = viewModel.isTimerRunning
+        return HStack(spacing: 4) {
+            Image(systemName: "circle.fill")
+                .font(.system(size: 6))
+                .foregroundStyle(running ? Color.green : Color(.systemGray3))
+                .symbolEffect(.pulse, options: .repeating, isActive: running)
+            Text(running ? "Running" : "Stopped")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(running ? "Timer running" : "Timer stopped")
+    }
+
     private func statCard(_ title: String, gallons: Double) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
@@ -126,9 +141,12 @@ struct ContentView: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Endurance")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Text("Endurance")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    timerIndicator
+                }
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(viewModel.enduranceText)
                         .font(.system(size: 88, weight: .thin))
