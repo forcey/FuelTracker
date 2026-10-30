@@ -1,0 +1,59 @@
+# Fuel Tracker
+
+A SwiftUI iPhone app for tracking fuel across an aircraft's four tanks in flight: which tank you're feeding from, how much is left in each, and how long you can stay up.
+
+## Features
+
+- **Four tanks:** left tip (LT), left main (LM), right main (RM) and right tip (RT). Each ring shows how full that tank is. The tank you're currently feeding from is blue.
+- **Tank switching:** tap a tank when you switch to it and enter the total fuel used so far, read from your fuel totalizer. The difference since the last switch is subtracted from the tank you were on.
+- **Totals and endurance:**
+  - **Used:** total fuel burned since the last reset.
+  - **Remaining:** total fuel left across all tanks.
+  - **Endurance:** time left at a 12 gal/hr burn rate, counting down since the last switch.
+  - **−45 Reserve:** endurance minus a 45-minute reserve.
+  - Both endurance times turn red when less than an hour is left.
+- **Last switch:** a line under the totals shows which tanks you last switched between, how long ago, and the fuel used at the time.
+- **Setting tank levels:** long-press a tank to set it from a FuelHawk dipstick reading. A slider converts the reading to gallons using that tank's calibration curve. The same sheet has **Empty**, **Full** and **All Tanks Full** buttons.
+- **Saved between launches:** tank levels and switch history are kept on the device.
+
+## Tank configuration
+
+| Tank | Capacity | Max FuelHawk reading |
+|------|----------|----------------------|
+| LM, RM (main) | 25 gal | 13.5 |
+| LT, RT (tip) | 17 gal | 13.0 |
+
+Capacities, FuelHawk calibration curves and the burn rate are hard-coded in `Fuel Tracker/Tank.swift` and `Fuel Tracker/FuelViewModel.swift`. Change them there to match your aircraft.
+
+## Project layout
+
+```
+Fuel Tracker/
+  Fuel_TrackerApp.swift   App entry point
+  ContentView.swift       Main screen: tank rings, totals, switch sheet
+  TankEditor.swift        Long-press sheet for setting a tank's level
+  FuelViewModel.swift     Fuel state, endurance math, persistence
+  Tank.swift              Tank models and FuelHawk calibration curves
+Fuel TrackerTests/        Unit tests
+Fuel TrackerUITests/      UI tests
+```
+
+## Building
+
+You need Xcode (for the iOS SDK) and iOS 18.5 or later on the phone. You can open the project in Xcode, or build from the command line:
+
+```sh
+# Build for a device (no signing, just checks that it compiles)
+xcodebuild -project "Fuel Tracker.xcodeproj" -scheme "Fuel Tracker" \
+  -destination generic/platform=iOS CODE_SIGNING_ALLOWED=NO build
+
+# Run the tests in the simulator
+xcodebuild -project "Fuel Tracker.xcodeproj" -scheme "Fuel Tracker" \
+  -destination "platform=iOS Simulator,name=iPhone 16" test
+```
+
+To install on your own iPhone, sign in with your Apple ID under Xcode → Settings → Accounts, choose your team under the target's Signing & Capabilities, and run it on the connected device.
+
+## Disclaimer
+
+This app is a convenience for keeping track of fuel. It doesn't replace your aircraft's fuel gauges, a proper preflight fuel check or your own fuel planning.
