@@ -58,14 +58,15 @@ You need Xcode (for the iOS SDK) and iOS or iPadOS 18.5 or later on the device. 
 The first time, sign in with your Apple ID under Xcode → Settings → Accounts so the app can be signed for your devices.
 
 ```sh
-make deploy    # Build, install and launch on the connected iPhone or iPad
-make build     # Only build the signed app
-make test      # Run the tests in the simulator
-make devices   # List connected devices
-make clean     # Delete build output
+make deploy iphone   # Build, install and launch on the connected iPhone
+make deploy ipad     # Same, on the connected iPad
+make build           # Only build the signed app
+make test            # Run the tests in the simulator
+make devices         # List connected devices
+make clean           # Delete build output
 ```
 
-`make deploy` uses the first iPhone it finds, or an iPad if there is no iPhone. A device counts if it is plugged in or paired over the network. To pick a specific device, pass its identifier from `make devices`:
+A device counts if it's plugged in or paired over the network. With plain `make deploy`, it uses an iPhone, or an iPad if there's no iPhone. To pick one device out of several of the same kind, pass its identifier from `make devices`:
 
 ```sh
 make deploy DEVICE=00008160-00021CEC34A00036

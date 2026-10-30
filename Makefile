@@ -4,14 +4,20 @@ BUNDLE_ID := com.todd-li.Fuel-Tracker
 APP       := build/Build/Products/Debug-iphoneos/Fuel Tracker.app
 SIMULATOR ?= iPhone 16
 
-# First connected or paired iPhone, or iPad if there is no iPhone.
+# Pick the device kind with an extra goal: `make deploy iphone` or
+# `make deploy ipad`. With neither, use an iPhone, or an iPad if there's no
+# iPhone. A device counts if it's plugged in or paired over the network.
 # Override with: make deploy DEVICE=<udid>
+KIND      := $(firstword $(filter iphone ipad,$(MAKECMDGOALS)))
+KIND_NAME := $(if $(filter iphone,$(KIND)),iPhone,$(if $(filter ipad,$(KIND)),iPad,iPhone or iPad))
 UDID_RE   := [0-9A-F]{8}-([0-9A-F]{16}|[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})
 DEVICE ?= $(shell xcrun devicectl list devices 2>/dev/null | \
-	awk '/connected|available \(paired\)/ { if (/iPhone/ && !phone) phone = $$0; else if (/iPad/ && !pad) pad = $$0 } \
-	     END { print (phone ? phone : pad) }' | grep -oE '$(UDID_RE)')
+	awk -v kind="$(KIND)" '/connected|available \(paired\)/ { \
+	         if (/iPhone/ && !phone) phone = $$0; else if (/iPad/ && !pad) pad = $$0 } \
+	     END { print (kind == "iphone" ? phone : kind == "ipad" ? pad : phone ? phone : pad) }' | \
+	grep -oE '$(UDID_RE)')
 
-.PHONY: deploy build test devices clean check-device
+.PHONY: deploy build test devices clean check-device iphone ipad
 
 ## Build, install and launch on the connected iPhone or iPad
 deploy: build
@@ -36,4 +42,8 @@ clean:
 	rm -rf build
 
 check-device:
-	@test -n "$(DEVICE)" || { echo "No connected iPhone or iPad found. Plug one in, or pass DEVICE=<udid>."; exit 1; }
+	@test -n "$(DEVICE)" || { echo "No $(KIND_NAME) found. Plug one in, or pass DEVICE=<udid>."; exit 1; }
+
+# Only select the device kind for other goals; they do nothing on their own.
+iphone ipad:
+	@:
