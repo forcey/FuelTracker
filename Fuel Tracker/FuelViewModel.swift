@@ -29,6 +29,7 @@ class FuelViewModel: ObservableObject {
     @Published var editingTankIndex: Int? = nil
 
     private var timerSubscription: AnyCancellable?
+    private var tankSubscriptions: [AnyCancellable] = []
 
     init() {
         timerSubscription = Timer.publish(every: 5, on: .main, in: .common)
@@ -36,6 +37,14 @@ class FuelViewModel: ObservableObject {
             .sink { [weak self] now in
                 self?.currentDate = now
             }
+        // Tanks are reference types, so changing a tank's gallons doesn't
+        // publish a change to `tanks`. Forward each tank's changes so views
+        // update immediately instead of on the next timer tick.
+        tankSubscriptions = tanks.map { tank in
+            tank.objectWillChange.sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+        }
         loadState()
     }
 
