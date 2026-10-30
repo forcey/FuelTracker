@@ -1,6 +1,6 @@
 # Fuel Tracker
 
-A SwiftUI iPhone app for tracking fuel across an aircraft's four tanks in flight: which tank you're feeding from, how much is left in each, and how long you can stay up.
+A SwiftUI iPhone app for tracking fuel across the four tanks of a Piper Cherokee 235 in flight: which tank you're feeding from, how much is left in each, and how long you can stay up.
 
 ## Features
 
@@ -22,6 +22,17 @@ A SwiftUI iPhone app for tracking fuel across an aircraft's four tanks in flight
 |------|----------|----------------------|
 | LM, RM (main) | 25 gal | 13.5 |
 | LT, RT (tip) | 17 gal | 13.0 |
+
+### FuelHawk to gallons
+
+The app converts a FuelHawk reading `r` to gallons `g` with a quadratic fit for each tank type:
+
+| Tank | Formula | Endpoints |
+|------|---------|-----------|
+| Main (LM, RM) | g = −0.0838 r² + 2.95 r + 0.356 | r = 0 → 0 gal, r = 13.5 → 25 gal |
+| Tip (LT, RT) | g = −0.013 r² + 1.49 r − 0.0792 | r = 0 → 0 gal, r = 13.0 → 17 gal |
+
+At the endpoints the app returns exactly empty or exactly full rather than the formula's value. The formula alone gives about 24.9 gal for a full main tank and about 17.1 gal for a full tip tank.
 
 Capacities, FuelHawk calibration curves and the burn rate are hard-coded in `Fuel Tracker/Tank.swift` and `Fuel Tracker/FuelViewModel.swift`. Change them there to match your aircraft.
 
