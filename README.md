@@ -1,6 +1,6 @@
 # Fuel Tracker
 
-A SwiftUI iPhone app for tracking fuel across the four tanks of a Piper Cherokee 235 in flight: which tank you're feeding from, how much is left in each, and how long you can stay up.
+A SwiftUI iPhone and iPad app for tracking fuel across the four tanks of a Piper Cherokee 235 in flight: which tank you're feeding from, how much is left in each, and how long you can stay up.
 
 ## Features
 
@@ -53,19 +53,19 @@ Fuel TrackerUITests/      UI tests
 
 ## Building
 
-You need Xcode (for the iOS SDK) and iOS 18.5 or later on the phone. You don't have to open Xcode: everything below runs from the command line.
+You need Xcode (for the iOS SDK) and iOS or iPadOS 18.5 or later on the device. You don't have to open Xcode: everything below runs from the command line.
 
-The first time, sign in with your Apple ID under Xcode → Settings → Accounts so the app can be signed for your phone.
+The first time, sign in with your Apple ID under Xcode → Settings → Accounts so the app can be signed for your devices.
 
 ```sh
-make deploy    # Build, install and launch on the connected iPhone
+make deploy    # Build, install and launch on the connected iPhone or iPad
 make build     # Only build the signed app
 make test      # Run the tests in the simulator
 make devices   # List connected devices
 make clean     # Delete build output
 ```
 
-`make deploy` uses the first connected iPhone it finds. To pick a different device, pass its identifier from `make devices`:
+`make deploy` uses the first iPhone it finds, or an iPad if there is no iPhone. A device counts if it is plugged in or paired over the network. To pick a specific device, pass its identifier from `make devices`:
 
 ```sh
 make deploy DEVICE=00008160-00021CEC34A00036
