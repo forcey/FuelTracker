@@ -53,19 +53,27 @@ Fuel TrackerUITests/      UI tests
 
 ## Building
 
-You need Xcode (for the iOS SDK) and iOS 18.5 or later on the phone. You can open the project in Xcode, or build from the command line:
+You need Xcode (for the iOS SDK) and iOS 18.5 or later on the phone. You don't have to open Xcode: everything below runs from the command line.
+
+The first time, sign in with your Apple ID under Xcode → Settings → Accounts so the app can be signed for your phone.
 
 ```sh
-# Build for a device (no signing, just checks that it compiles)
-xcodebuild -project "Fuel Tracker.xcodeproj" -scheme "Fuel Tracker" \
-  -destination generic/platform=iOS CODE_SIGNING_ALLOWED=NO build
-
-# Run the tests in the simulator
-xcodebuild -project "Fuel Tracker.xcodeproj" -scheme "Fuel Tracker" \
-  -destination "platform=iOS Simulator,name=iPhone 16" test
+make deploy    # Build, install and launch on the connected iPhone
+make build     # Only build the signed app
+make test      # Run the tests in the simulator
+make devices   # List connected devices
+make clean     # Delete build output
 ```
 
-To install on your own iPhone, sign in with your Apple ID under Xcode → Settings → Accounts, choose your team under the target's Signing & Capabilities, and run it on the connected device.
+`make deploy` uses the first connected iPhone it finds. To pick a different device, pass its identifier from `make devices`:
+
+```sh
+make deploy DEVICE=00008160-00021CEC34A00036
+```
+
+`make test` runs on an iPhone 16 simulator. Change it with `SIMULATOR="iPhone 17"`.
+
+If you sign with a free Apple ID, the app stops opening after 7 days. Run `make deploy` again to reinstall it.
 
 ## Disclaimer
 
