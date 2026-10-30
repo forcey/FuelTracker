@@ -5,6 +5,7 @@ struct SwitchTankSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var viewModel: FuelViewModel
     @State private var usedInput: String = ""
+    @State private var selection: TextSelection? = nil
     @FocusState private var isInputFocused: Bool
 
     private var fromTank: Tank? {
@@ -32,7 +33,7 @@ struct SwitchTankSheet: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    TextField("Gallons", text: $usedInput)
+                    TextField("Gallons", text: $usedInput, selection: $selection)
                         .keyboardType(.decimalPad)
                         .font(.system(size: 40, weight: .light))
                         .monospacedDigit()
@@ -92,6 +93,14 @@ struct SwitchTankSheet: View {
         .onAppear {
             usedInput = String(format: "%.1f", (viewModel.totalUsedGallons ?? -5) + 5)
             isInputFocused = true
+        }
+        .onChange(of: isInputFocused) { _, focused in
+            guard focused else { return }
+            // Select the suggestion so typing replaces it. Wait for the field
+            // to finish taking focus, or it puts the cursor at the end.
+            DispatchQueue.main.async {
+                selection = TextSelection(range: usedInput.startIndex..<usedInput.endIndex)
+            }
         }
     }
 }

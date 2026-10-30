@@ -17,39 +17,24 @@ struct ContentView: View {
     @State private var switchTarget: SwitchTarget? = nil
     @State private var levelEntry: LevelEntry? = nil
     @State private var showEditSheet = false
-    @State private var confirmPreflight = false
 
     private var isLow: Bool { viewModel.enduranceHours < 1 }
     private var totalCapacity: Double { viewModel.tanks.reduce(0) { $0 + $1.capacity } }
 
-    private var timerIndicator: some View {
-        let running = viewModel.isTimerRunning
-        return HStack(spacing: 4) {
-            Image(systemName: "circle.fill")
-                .font(.system(size: 6))
-                .foregroundStyle(running ? Color.green : Color(.systemGray3))
-                .symbolEffect(.pulse, options: .repeating, isActive: running)
-            Text(running ? "Running" : "Stopped")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(running ? "Timer running" : "Timer stopped")
+    /// Width of the status-bar column on the side of the screen (iPhone Duo), if there is one.
+    private func sidebarWidth(_ insets: EdgeInsets) -> CGFloat? {
+        insets.trailing >= 60 ? insets.trailing : nil
     }
 
-    private func statCell<Accessory: View>(
-        _ title: String, value: String, unit: String? = nil, warn: Bool = false,
-        @ViewBuilder accessory: () -> Accessory = { EmptyView() }
+    private func statCell(
+        _ title: String, value: String, unit: String? = nil, warn: Bool = false, ticking: Bool = false
     ) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 6) {
-                Text(title)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                accessory()
-            }
+            Text(title)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
             HStack(alignment: .firstTextBaseline, spacing: 5) {
-                Text(value)
+                ClockText(text: value, isTicking: ticking)
                     .font(.title2.weight(.medium))
                     .monospacedDigit()
                     .foregroundStyle(warn ? .red : .primary)
@@ -73,8 +58,10 @@ struct ContentView: View {
         let columns = [GridItem(.flexible(), spacing: 1), GridItem(.flexible(), spacing: 1)]
         LazyVGrid(columns: columns, spacing: 1) {
             if viewModel.isInFlight {
-                statCell("Endurance", value: viewModel.enduranceText, warn: isLow) { timerIndicator }
-                statCell("After 45 min reserve", value: viewModel.enduranceMinusReserveText, warn: isLow)
+                statCell("Endurance", value: viewModel.enduranceText, warn: isLow,
+                         ticking: viewModel.isTimerRunning)
+                statCell("After 45 min reserve", value: viewModel.enduranceMinusReserveText, warn: isLow,
+                         ticking: viewModel.isTimerRunning)
                 statCell("Remaining", value: String(format: "%.1f", viewModel.totalRemainingGallons()), unit: "gal")
                 statCell("Used", value: String(format: "%.1f", viewModel.totalUsedGallons ?? 0), unit: "gal")
             } else {
@@ -87,54 +74,122 @@ struct ContentView: View {
         .clipShape(RoundedRectangle(cornerRadius: 22))
     }
 
+    private func toggleMode() {
+        withAnimation(.spring(duration: 0.7)) { viewModel.setInFlight(!viewModel.isInFlight) }
+    }
+
+    private var modeName: String { viewModel.isInFlight ? "In Flight" : "Preflight" }
+
     private var modeButton: some View {
-        Button {
-            if viewModel.isInFlight {
-                confirmPreflight = true
-            } else {
-                withAnimation(.spring(duration: 0.7)) { viewModel.setInFlight(true) }
-            }
-        } label: {
-            Label(viewModel.isInFlight ? "In Flight" : "Preflight", systemImage: "arrow.triangle.2.circlepath")
+        Button(action: toggleMode) {
+            Label(modeName, systemImage: "arrow.triangle.2.circlepath")
                 .font(.subheadline.weight(.semibold))
                 .padding(.horizontal, 14)
                 .frame(height: 44)
                 .background(Color(.secondarySystemGroupedBackground), in: Capsule())
         }
         .accessibilityHint(viewModel.isInFlight ? "Switches to preflight" : "Switches to in flight and starts the timer")
-        .confirmationDialog("Switch to preflight?", isPresented: $confirmPreflight, titleVisibility: .visible) {
-            Button("Switch to Preflight") {
-                withAnimation(.spring(duration: 0.7)) { viewModel.setInFlight(false) }
+    }
+
+    private var moreMenu: some View {
+        Menu {
+            Button("Reset Used", systemImage: "arrow.counterclockwise") {
+                viewModel.totalUsedGallons = nil
+                viewModel.saveState()
             }
-        } message: {
-            Text("The endurance timer stops. It starts again from now when you switch back to in flight.")
+            Button("All Tanks Full", systemImage: "fuelpump") {
+                viewModel.fillAllTanks()
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.body.weight(.semibold))
+                .frame(width: 44, height: 44)
+                .background(Color(.secondarySystemGroupedBackground), in: Circle())
         }
+        .accessibilityLabel("More")
+    }
+
+    private var title: some View {
+        Text("CHEROKEE 235")
+            .font(.footnote.weight(.semibold))
+            .tracking(1)
+            .foregroundStyle(.secondary)
+    }
+
+    /// The title and buttons stacked in the status-bar column, within thumb reach.
+    private var sidebarHeader: some View {
+        VStack(spacing: 18) {
+            Spacer()
+            Text("CHEROKEE\n235")
+                .font(.caption2.weight(.semibold))
+                .tracking(0.5)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize()
+            Button(action: toggleMode) {
+                VStack(spacing: 6) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.title3.weight(.semibold))
+                        .frame(width: 52, height: 52)
+                        .background(Color(.secondarySystemGroupedBackground), in: Circle())
+                    Text(modeName)
+                        .font(.caption.weight(.semibold))
+                }
+            }
+            .accessibilityLabel(modeName)
+            .accessibilityHint(viewModel.isInFlight ? "Switches to preflight" : "Switches to in flight and starts the timer")
+            moreMenu
+        }
+        .padding(.horizontal, 6)
+        .padding(.bottom, 16)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 10) {
-                Text("CHEROKEE 235")
-                    .font(.footnote.weight(.semibold))
-                    .tracking(1)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                modeButton
-                Menu {
-                    Button("Reset Used", systemImage: "arrow.counterclockwise") {
-                        viewModel.totalUsedGallons = nil
-                        viewModel.saveState()
-                    }
-                    Button("All Tanks Full", systemImage: "fuelpump") {
-                        viewModel.fillAllTanks()
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.body.weight(.semibold))
-                        .frame(width: 44, height: 44)
-                        .background(Color(.secondarySystemGroupedBackground), in: Circle())
+        GeometryReader { geo in
+            let sidebar = sidebarWidth(geo.safeAreaInsets)
+            HStack(spacing: 0) {
+                mainColumn(showsHeader: sidebar == nil)
+                if let sidebar {
+                    sidebarHeader.frame(width: sidebar)
                 }
-                .accessibilityLabel("More")
+            }
+            .ignoresSafeArea(.container, edges: sidebar == nil ? [] : .trailing)
+        }
+        .background(Color(.systemGroupedBackground))
+        .sheet(isPresented: $showEditSheet) {
+            TankEditor(
+                tank: viewModel.tanks[viewModel.editingTankIndex!],
+                showEditSheet: $showEditSheet
+            )
+            .environmentObject(viewModel)
+            .onDisappear {
+                viewModel.stopEditingTank()
+            }
+        }
+        .sheet(item: $switchTarget) { target in
+            SwitchTankSheet(toIndex: target.id)
+                .environmentObject(viewModel)
+        }
+        .sheet(item: $levelEntry) { entry in
+            LevelEntrySheet(tank: viewModel.tanks[entry.tankIndex], unit: entry.unit)
+                .environmentObject(viewModel)
+        }
+        .onAppear {
+            if viewModel.lastActiveTankIndex == nil {
+                viewModel.lastActiveTankIndex = 0
+            }
+        }
+    }
+
+    private func mainColumn(showsHeader: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if showsHeader {
+                HStack(spacing: 10) {
+                    title
+                    Spacer()
+                    modeButton
+                    moreMenu
+                }
             }
 
             stats
@@ -185,29 +240,26 @@ struct ContentView: View {
         .padding(.horizontal, 20)
         .padding(.top, 8)
         .padding(.bottom, 12)
-        .background(Color(.systemGroupedBackground))
-        .sheet(isPresented: $showEditSheet) {
-            TankEditor(
-                tank: viewModel.tanks[viewModel.editingTankIndex!],
-                showEditSheet: $showEditSheet
-            )
-            .environmentObject(viewModel)
-            .onDisappear {
-                viewModel.stopEditingTank()
+    }
+}
+
+/// "4:45", with the colon blinking every second while the clock runs.
+private struct ClockText: View {
+    let text: String
+    let isTicking: Bool
+
+    var body: some View {
+        if isTicking, let colon = text.firstIndex(of: ":") {
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let shown = Int(context.date.timeIntervalSinceReferenceDate) % 2 == 0
+                Text("""
+                    \(Text(text[..<colon]))\
+                    \(Text(":").foregroundStyle(shown ? AnyShapeStyle(.foreground) : AnyShapeStyle(.clear)))\
+                    \(Text(text[text.index(after: colon)...]))
+                    """)
             }
-        }
-        .sheet(item: $switchTarget) { target in
-            SwitchTankSheet(toIndex: target.id)
-                .environmentObject(viewModel)
-        }
-        .sheet(item: $levelEntry) { entry in
-            LevelEntrySheet(tank: viewModel.tanks[entry.tankIndex], unit: entry.unit)
-                .environmentObject(viewModel)
-        }
-        .onAppear {
-            if viewModel.lastActiveTankIndex == nil {
-                viewModel.lastActiveTankIndex = 0
-            }
+        } else {
+            Text(text)
         }
     }
 }

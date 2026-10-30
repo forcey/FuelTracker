@@ -4,11 +4,11 @@ A SwiftUI iPhone and iPad app for tracking fuel across the four tanks of a Piper
 
 ## Features
 
-- **Airplane view:** a top-down wireframe of the airplane with a fuel gauge over each of the four tanks: left tip (LT), left main (LM), right main (RM) and right tip (RT). Bars are drawn to scale, so the 25 gal mains stand taller than the 17 gal tips.
-- **Preflight and in-flight modes:** the button at the top switches between them.
+- **Airplane view:** a top-down drawing of the Cherokee in its red-and-white paint, with each tank's name on the wing where it sits (LT, LM, RM, RT) and its fuel gauge beside it. Bars are drawn to scale, so the 25 gal mains stand taller than the 17 gal tips.
+- **Preflight and in-flight modes:** the button at the top switches between them. On iPhone Duo, the title and buttons sit in the column beside the screen, under the clock.
   - **Preflight:** the airplane turns to face you, as if you're standing in front of it, so the left wing is on your right. Drag a gauge to set its level in half-gallon steps. Each gauge shows gallons and the FuelHawk reading; tap either to type a reading instead. The endurance timer is stopped.
-  - **In flight:** the airplane points nose up, as seen from the cockpit. The tank you're feeding from is blue and marked with a ▲ under its name. The endurance timer always runs, starting from the moment you switch to in flight. Switching back to preflight asks first, since it stops the timer.
-- **Tank switching:** tap a tank when you switch to it and enter the total fuel used so far, read from your fuel totalizer. The difference since the last switch is subtracted from the tank you were on; the sheet previews how much that leaves before you confirm.
+  - **In flight:** the airplane points nose up, as seen from the cockpit. The tank you're feeding from has its name filled in blue and a ▲ under its gauge. The endurance timer always runs, starting from the moment you switch to in flight; the colons in the endurance times blink while it does.
+- **Tank switching:** tap a tank's gauge or its name on the wing when you switch to it and enter the total fuel used so far (the suggested number is selected, so you can just type over it), read from your fuel totalizer. The difference since the last switch is subtracted from the tank you were on; the sheet previews how much that leaves before you confirm.
 - **Totals and endurance:**
   - **Used:** total fuel burned since the last reset.
   - **Remaining:** total fuel left across all tanks.
@@ -46,7 +46,7 @@ Capacities, FuelHawk calibration curves and the burn rate are hard-coded in `Fue
 Fuel Tracker/
   Fuel_TrackerApp.swift   App entry point
   ContentView.swift       Main screen: mode button, totals, airplane
-  AirplaneScene.swift     Top-down airplane drawing and gauge layout
+  AirplaneScene.swift     Airplane drawing, wing labels and gauge layout
   FuelGauge.swift         One tank's gauge: in-flight taps, preflight drag
   LevelEntrySheet.swift   Type a level in gallons or FuelHawk
   SwitchTankSheet.swift   Tap sheet for switching tanks

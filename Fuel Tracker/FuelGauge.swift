@@ -7,8 +7,9 @@ enum LevelUnit: String, CaseIterable, Identifiable {
     var id: Self { self }
 }
 
-/// One tank's vertical gauge. In flight: tap to switch to it, hold to set its
-/// level. In preflight: drag the bar to set the level, or tap a number to type it.
+/// One tank's vertical gauge; its name is on the wing below it. In flight: tap
+/// to switch to it, hold to set its level. In preflight: drag the bar to set the
+/// level, or tap a number to type it.
 struct FuelGauge: View {
     @ObservedObject var tank: Tank
     let isInFlight: Bool
@@ -44,33 +45,21 @@ struct FuelGauge: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 flightBar
-                nameLabel
-            } else {
-                nameLabel
-                scrubBar
-                    .frame(height: tallestBarHeight, alignment: .top)
-                VStack(spacing: 6) {
-                    valueButton(String(format: "%.1f", tank.gallons), unit: "gal", for: .gallons)
-                    valueButton(String(format: "%.1f", tank.fuelHawkReading(forGallons: tank.gallons)),
-                                unit: "FuelHawk", for: .fuelHawk)
-                }
-            }
-        }
-    }
-
-    private var nameLabel: some View {
-        VStack(spacing: 2) {
-            Text(tank.name)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(isInFlight && isFeeding ? Color.accentColor : .primary)
-            if isInFlight {
                 // Always takes up room, so the bars stay level when the feeding tank changes.
                 Image(systemName: "triangle.fill")
                     .font(.caption2)
                     .foregroundStyle(Color.accentColor)
                     .opacity(isFeeding ? 1 : 0)
-                    .accessibilityLabel("Feeding")
-                    .accessibilityHidden(!isFeeding)
+                    .accessibilityHidden(true)
+            } else {
+                scrubBar
+                    .frame(height: tallestBarHeight, alignment: .top)
+                    .padding(.top, 4)
+                VStack(spacing: 6) {
+                    valueButton(String(format: "%.1f", tank.gallons), unit: "gal", for: .gallons)
+                    valueButton(String(format: "%.1f", tank.fuelHawkReading(forGallons: tank.gallons)),
+                                unit: "FuelHawk", for: .fuelHawk)
+                }
             }
         }
     }
