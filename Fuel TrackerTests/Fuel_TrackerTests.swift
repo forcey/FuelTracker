@@ -31,6 +31,8 @@ final class Fuel_TrackerTests: XCTestCase {
     @MainActor
     func testSwitchToTankUpdatesState() {
         let vm = FuelViewModel()
+        // Don't depend on whatever state the device has saved.
+        vm.tanks[0].gallons = 12
         vm.lastActiveTankIndex = 0
         vm.totalUsedGallons = 0
         vm.switchToTank(at: 1, newTotalUsed: 5)
@@ -45,9 +47,12 @@ final class Fuel_TrackerTests: XCTestCase {
     func testEnduranceCalculation() {
         let vm = FuelViewModel()
         vm.tanks.forEach { $0.gallons = 14 }
+        // Elapsed time only counts once there's a used total.
+        vm.totalUsedGallons = 0
         vm.currentDate = Date()
         vm.lastSwitchDate = vm.currentDate.addingTimeInterval(-3600)
-        let expected = vm.totalRemainingGallons() / 14 - 1
+        // 12 gal/hr burn rate, minus the hour since the last switch.
+        let expected = vm.totalRemainingGallons() / 12 - 1
         XCTAssertEqual(vm.enduranceHours, expected, accuracy: 0.0001)
         XCTAssertEqual(vm.enduranceMinusReserveHours, max(expected - 0.75, 0), accuracy: 0.0001)
     }
