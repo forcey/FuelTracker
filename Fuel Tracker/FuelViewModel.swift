@@ -10,6 +10,7 @@ class FuelViewModel: ObservableObject {
         var lastToIndex: Int?
         var lastSwitchDate: Date?
         var totalUsedGallons: Double?
+        var isInFlight: Bool?
     }
 
     private let storageKey = "FuelTrackerState"
@@ -27,6 +28,9 @@ class FuelViewModel: ObservableObject {
     @Published var currentDate: Date = Date()
     @Published var totalUsedGallons : Double? = nil
     @Published var editingTankIndex: Int? = nil
+    /// Preflight: set tank levels on the ground; the endurance timer is stopped.
+    /// In flight: switch tanks; the timer always runs.
+    @Published var isInFlight = false
 
     private var timerSubscription: AnyCancellable?
     private var tankSubscriptions: [AnyCancellable] = []
@@ -72,14 +76,27 @@ class FuelViewModel: ObservableObject {
     }
 
     private func hoursElapsedSinceLastSwitch() -> Double {
-        guard let lastDate = lastSwitchDate, totalUsedGallons != nil else { return 0 }
-        return currentDate.timeIntervalSince(lastDate) / 3600
+        guard isInFlight, let lastDate = lastSwitchDate else { return 0 }
+        return max(currentDate.timeIntervalSince(lastDate), 0) / 3600
     }
 
-    /// Whether endurance is counting down: starts at the first tank switch,
-    /// stops on Reset Used or when fuel runs out.
+    /// Whether endurance is counting down: always in flight, until fuel runs out.
     var isTimerRunning: Bool {
-        lastSwitchDate != nil && totalUsedGallons != nil && enduranceHours > 0
+        isInFlight && enduranceHours > 0
+    }
+
+    /// Entering flight starts the clock from now, from the levels set in
+    /// preflight. Going back to preflight stops it.
+    func setInFlight(_ flying: Bool) {
+        guard flying != isInFlight else { return }
+        if flying {
+            lastSwitchDate = Date.now
+            currentDate = Date.now
+            lastFromIndex = nil
+            lastToIndex = nil
+        }
+        isInFlight = flying
+        saveState()
     }
 
     var enduranceHours: Double {
@@ -136,7 +153,8 @@ class FuelViewModel: ObservableObject {
             lastFromIndex: lastFromIndex,
             lastToIndex: lastToIndex,
             lastSwitchDate: lastSwitchDate,
-            totalUsedGallons: totalUsedGallons
+            totalUsedGallons: totalUsedGallons,
+            isInFlight: isInFlight
         )
         if let data = try? JSONEncoder().encode(state) {
             UserDefaults.standard.set(data, forKey: storageKey)
@@ -154,6 +172,7 @@ class FuelViewModel: ObservableObject {
             lastToIndex = state.lastToIndex
             lastSwitchDate = state.lastSwitchDate
             totalUsedGallons = state.totalUsedGallons
+            isInFlight = state.isInFlight ?? false
         }
     }
 

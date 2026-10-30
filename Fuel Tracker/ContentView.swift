@@ -5,78 +5,22 @@ private struct SwitchTarget: Identifiable {
     let id: Int
 }
 
+/// The tank and unit a level-entry sheet is open for.
+private struct LevelEntry: Identifiable {
+    let tankIndex: Int
+    let unit: LevelUnit
+    var id: String { "\(tankIndex)-\(unit.rawValue)" }
+}
+
 struct ContentView: View {
     @StateObject private var viewModel = FuelViewModel()
     @State private var switchTarget: SwitchTarget? = nil
+    @State private var levelEntry: LevelEntry? = nil
     @State private var showEditSheet = false
+    @State private var confirmPreflight = false
 
     private var isLow: Bool { viewModel.enduranceHours < 1 }
-
-    @ViewBuilder
-    private func tankButton(for index: Int) -> some View {
-        let tank = viewModel.tanks[index]
-        let percent = max(min(tank.gallons / tank.capacity, 1), 0)
-        let isFeeding = viewModel.lastActiveTankIndex == index
-        let color: Color = viewModel.editingTankIndex == index ? .red :
-            isFeeding ? .accentColor : Color(.systemGray)
-
-        VStack(spacing: 8) {
-            Button {
-                if viewModel.editingTankIndex != index {
-                    switchTarget = SwitchTarget(id: index)
-                }
-            } label: {
-                ZStack {
-                    Circle()
-                        .stroke(Color(.systemGray5), lineWidth: 6)
-
-                    Circle()
-                        .trim(from: 0, to: percent)
-                        .stroke(color, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-
-                    Text(String(format: "%.0f", tank.gallons))
-                        .font(.title2.weight(.semibold))
-                        .monospacedDigit()
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                        .padding(8)
-                }
-                // Shrink to fit narrow screens (e.g. the outside display), up to 66pt.
-                .frame(maxWidth: 66)
-                .aspectRatio(1, contentMode: .fit)
-                .padding(3)
-            }
-            .buttonStyle(.plain)
-            .simultaneousGesture(
-                LongPressGesture(minimumDuration: 0.5)
-                    .onEnded { _ in
-                        viewModel.startEditingTank(index: index)
-                        showEditSheet = true
-                    }
-            )
-
-            VStack(spacing: 2) {
-                Text(tank.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(isFeeding ? Color.accentColor : .primary)
-                if isFeeding {
-                    Image(systemName: "triangle.fill")
-                        .font(.caption)
-                        .foregroundStyle(Color.accentColor)
-                        .accessibilityLabel("Feeding")
-                } else {
-                    Text("of \(String(format: "%.0f", tank.capacity))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .lineLimit(1)
-            .minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity)
-    }
+    private var totalCapacity: Double { viewModel.tanks.reduce(0) { $0 + $1.capacity } }
 
     private var timerIndicator: some View {
         let running = viewModel.isTimerRunning
@@ -93,36 +37,89 @@ struct ContentView: View {
         .accessibilityLabel(running ? "Timer running" : "Timer stopped")
     }
 
-    private func statCard(_ title: String, gallons: Double) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(String(format: "%.1f", gallons))
-                    .font(.title.weight(.medium))
-                    .monospacedDigit()
-                Text("gal")
-                    .font(.subheadline)
+    private func statCell<Accessory: View>(
+        _ title: String, value: String, unit: String? = nil, warn: Bool = false,
+        @ViewBuilder accessory: () -> Accessory = { EmptyView() }
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
+                accessory()
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                Text(value)
+                    .font(.title2.weight(.medium))
+                    .monospacedDigit()
+                    .foregroundStyle(warn ? .red : .primary)
+                if let unit {
+                    Text(unit)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
             .lineLimit(1)
             .minimumScaleFactor(0.5)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 14)
-        .padding(.horizontal, 18)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22))
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(Color(.secondarySystemGroupedBackground))
+    }
+
+    @ViewBuilder
+    private var stats: some View {
+        let columns = [GridItem(.flexible(), spacing: 1), GridItem(.flexible(), spacing: 1)]
+        LazyVGrid(columns: columns, spacing: 1) {
+            if viewModel.isInFlight {
+                statCell("Endurance", value: viewModel.enduranceText, warn: isLow) { timerIndicator }
+                statCell("After 45 min reserve", value: viewModel.enduranceMinusReserveText, warn: isLow)
+                statCell("Remaining", value: String(format: "%.1f", viewModel.totalRemainingGallons()), unit: "gal")
+                statCell("Used", value: String(format: "%.1f", viewModel.totalUsedGallons ?? 0), unit: "gal")
+            } else {
+                statCell("Fuel on board", value: String(format: "%.1f", viewModel.totalRemainingGallons()),
+                         unit: "of \(String(format: "%.0f", totalCapacity)) gal")
+                statCell("Endurance", value: viewModel.enduranceText, unit: "h")
+            }
+        }
+        .background(Color(.systemGray5))
+        .clipShape(RoundedRectangle(cornerRadius: 22))
+    }
+
+    private var modeButton: some View {
+        Button {
+            if viewModel.isInFlight {
+                confirmPreflight = true
+            } else {
+                withAnimation(.spring(duration: 0.7)) { viewModel.setInFlight(true) }
+            }
+        } label: {
+            Label(viewModel.isInFlight ? "In Flight" : "Preflight", systemImage: "arrow.triangle.2.circlepath")
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 14)
+                .frame(height: 44)
+                .background(Color(.secondarySystemGroupedBackground), in: Capsule())
+        }
+        .accessibilityHint(viewModel.isInFlight ? "Switches to preflight" : "Switches to in flight and starts the timer")
+        .confirmationDialog("Switch to preflight?", isPresented: $confirmPreflight, titleVisibility: .visible) {
+            Button("Switch to Preflight") {
+                withAnimation(.spring(duration: 0.7)) { viewModel.setInFlight(false) }
+            }
+        } message: {
+            Text("The endurance timer stops. It starts again from now when you switch back to in flight.")
+        }
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 10) {
                 Text("CHEROKEE 235")
                     .font(.footnote.weight(.semibold))
                     .tracking(1)
                     .foregroundStyle(.secondary)
                 Spacer()
+                modeButton
                 Menu {
                     Button("Reset Used", systemImage: "arrow.counterclockwise") {
                         viewModel.totalUsedGallons = nil
@@ -140,57 +137,26 @@ struct ContentView: View {
                 .accessibilityLabel("More")
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Text("Endurance")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    timerIndicator
-                }
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(viewModel.enduranceText)
-                        .font(.system(size: 88, weight: .thin))
-                        .monospacedDigit()
-                        .foregroundStyle(isLow ? .red : .primary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                    Text("h")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                }
-                Text("\(viewModel.enduranceMinusReserveText) after 45 min reserve")
-                    .font(.subheadline)
-                    .monospacedDigit()
-                    .foregroundStyle(isLow ? .red : .secondary)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 12)
-                    .background(Color(.secondarySystemGroupedBackground), in: Capsule())
-                    .padding(.top, 6)
-            }
+            stats
 
-            HStack(alignment: .top, spacing: 4) {
-                ForEach(viewModel.tanks.indices, id: \.self) { index in
-                    if index == viewModel.tanks.count / 2 {
-                        // Fuselage between the left and right wing tanks.
-                        Capsule()
-                            .fill(Color(.systemGray5))
-                            .frame(width: 2, height: 56)
-                            .padding(.horizontal, 4)
-                            .padding(.top, 8)
+            AirplaneScene(
+                viewModel: viewModel,
+                onTapTank: { index in
+                    if viewModel.editingTankIndex != index {
+                        switchTarget = SwitchTarget(id: index)
                     }
-                    tankButton(for: index)
+                },
+                onLongPressTank: { index in
+                    viewModel.startEditingTank(index: index)
+                    showEditSheet = true
+                },
+                onEnterLevel: { index, unit in
+                    levelEntry = LevelEntry(tankIndex: index, unit: unit)
                 }
-            }
-            .padding(.vertical, 20)
-            .padding(.horizontal, 10)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 28))
+            )
+            .frame(maxHeight: .infinity)
 
-            HStack(spacing: 12) {
-                statCard("Remaining", gallons: viewModel.totalRemainingGallons())
-                statCard("Used", gallons: viewModel.totalUsedGallons ?? 0)
-            }
-
-            if !viewModel.lastSwitchText.isEmpty {
+            if viewModel.isInFlight && !viewModel.lastSwitchText.isEmpty {
                 HStack(spacing: 14) {
                     Image(systemName: "arrow.left.arrow.right")
                         .font(.footnote.weight(.semibold))
@@ -208,9 +174,9 @@ struct ContentView: View {
                 .padding(.horizontal, 6)
             }
 
-            Spacer(minLength: 0)
-
-            Text("Tap a tank to switch · Hold to set its level")
+            Text(viewModel.isInFlight
+                 ? "Tap a tank to switch · Hold to set its level"
+                 : "Drag a gauge to set its level · Tap a number to type it")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)
@@ -232,6 +198,10 @@ struct ContentView: View {
         }
         .sheet(item: $switchTarget) { target in
             SwitchTankSheet(toIndex: target.id)
+                .environmentObject(viewModel)
+        }
+        .sheet(item: $levelEntry) { entry in
+            LevelEntrySheet(tank: viewModel.tanks[entry.tankIndex], unit: entry.unit)
                 .environmentObject(viewModel)
         }
         .onAppear {

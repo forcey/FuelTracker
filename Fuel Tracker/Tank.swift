@@ -17,6 +17,19 @@ class Tank: Identifiable, ObservableObject {
     func convertFuelHawk(_ reading: Double) -> Double {
         0
     }
+
+    /// The FuelHawk reading for a given amount of fuel: the inverse of
+    /// `convertFuelHawk`, found by bisection since both curves rise steadily.
+    func fuelHawkReading(forGallons gallons: Double) -> Double {
+        if gallons <= 0 { return 0 }
+        if gallons >= capacity { return maxFuelHawkReading }
+        var low = 0.0, high = maxFuelHawkReading
+        for _ in 0..<50 {
+            let mid = (low + high) / 2
+            if convertFuelHawk(mid) < gallons { low = mid } else { high = mid }
+        }
+        return (low + high) / 2
+    }
 }
 
 class MainTank: Tank {

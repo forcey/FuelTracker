@@ -47,13 +47,50 @@ final class Fuel_TrackerTests: XCTestCase {
     func testEnduranceCalculation() {
         let vm = FuelViewModel()
         vm.tanks.forEach { $0.gallons = 14 }
-        // Elapsed time only counts once there's a used total.
-        vm.totalUsedGallons = 0
+        // Elapsed time only counts in flight.
+        vm.isInFlight = true
         vm.currentDate = Date()
         vm.lastSwitchDate = vm.currentDate.addingTimeInterval(-3600)
         // 12 gal/hr burn rate, minus the hour since the last switch.
         let expected = vm.totalRemainingGallons() / 12 - 1
         XCTAssertEqual(vm.enduranceHours, expected, accuracy: 0.0001)
         XCTAssertEqual(vm.enduranceMinusReserveHours, max(expected - 0.75, 0), accuracy: 0.0001)
+    }
+
+    func testFuelHawkReadingInvertsConversion() {
+        for tank in [MainTank(name: "M", initialGallons: 0), AuxTank(name: "A", initialGallons: 0)] {
+            XCTAssertEqual(tank.fuelHawkReading(forGallons: 0), 0)
+            XCTAssertEqual(tank.fuelHawkReading(forGallons: tank.capacity), tank.maxFuelHawkReading)
+            for reading in stride(from: 0.5, to: tank.maxFuelHawkReading, by: 0.5) {
+                let gallons = tank.convertFuelHawk(reading)
+                XCTAssertEqual(tank.fuelHawkReading(forGallons: gallons), reading, accuracy: 0.0001)
+            }
+        }
+    }
+
+    @MainActor
+    func testPreflightStopsTimer() {
+        let vm = FuelViewModel()
+        vm.tanks.forEach { $0.gallons = 12 }
+        vm.isInFlight = false
+        vm.currentDate = Date()
+        vm.lastSwitchDate = vm.currentDate.addingTimeInterval(-3600)
+        XCTAssertEqual(vm.enduranceHours, 4, accuracy: 0.0001)
+        XCTAssertFalse(vm.isTimerRunning)
+    }
+
+    @MainActor
+    func testEnteringFlightStartsTimerFromNow() {
+        let vm = FuelViewModel()
+        vm.tanks.forEach { $0.gallons = 12 }
+        vm.isInFlight = false
+        vm.lastSwitchDate = Date().addingTimeInterval(-3600)
+        vm.lastFromIndex = 0
+        vm.lastToIndex = 1
+        vm.setInFlight(true)
+        XCTAssertTrue(vm.isTimerRunning)
+        XCTAssertEqual(vm.lastSwitchDate!.timeIntervalSinceNow, 0, accuracy: 1)
+        XCTAssertEqual(vm.enduranceHours, 4, accuracy: 0.001)
+        XCTAssertEqual(vm.lastSwitchText, "")
     }
 }
