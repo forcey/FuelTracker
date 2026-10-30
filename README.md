@@ -4,15 +4,16 @@ A SwiftUI iPhone app for tracking fuel across the four tanks of a Piper Cherokee
 
 ## Features
 
-- **Four tanks:** left tip (LT), left main (LM), right main (RM) and right tip (RT). Each ring shows how full that tank is. The tank you're currently feeding from is blue.
-- **Tank switching:** tap a tank when you switch to it and enter the total fuel used so far, read from your fuel totalizer. The difference since the last switch is subtracted from the tank you were on.
+- **Four tanks:** left tip (LT), left main (LM), right main (RM) and right tip (RT), laid out like the wing. Each ring shows how full that tank is. The tank you're currently feeding from is blue and marked with a ▲ under its name.
+- **Tank switching:** tap a tank when you switch to it and enter the total fuel used so far, read from your fuel totalizer. The difference since the last switch is subtracted from the tank you were on; the sheet previews how much that leaves before you confirm.
 - **Totals and endurance:**
   - **Used:** total fuel burned since the last reset.
   - **Remaining:** total fuel left across all tanks.
-  - **Endurance:** time left at a 12 gal/hr burn rate, counting down since the last switch.
-  - **−45 Reserve:** endurance minus a 45-minute reserve.
+  - **Endurance:** time left at a 12 gal/hr burn rate, counting down since the last switch. Shown large at the top of the screen.
+  - **After 45 min reserve:** endurance minus a 45-minute reserve.
   - Both endurance times turn red when less than an hour is left.
 - **Last switch:** a line under the totals shows which tanks you last switched between, how long ago, and the fuel used at the time.
+- **More menu (•••):** **Reset Used** clears the used total, and **All Tanks Full** fills every tank.
 - **Setting tank levels:** long-press a tank to set it from a FuelHawk dipstick reading. A slider converts the reading to gallons using that tank's calibration curve. The same sheet has **Empty**, **Full** and **All Tanks Full** buttons.
 - **Saved between launches:** tank levels and switch history are kept on the device.
 
@@ -41,7 +42,8 @@ Capacities, FuelHawk calibration curves and the burn rate are hard-coded in `Fue
 ```
 Fuel Tracker/
   Fuel_TrackerApp.swift   App entry point
-  ContentView.swift       Main screen: tank rings, totals, switch sheet
+  ContentView.swift       Main screen: endurance, tank rings, totals
+  SwitchTankSheet.swift   Tap sheet for switching tanks
   TankEditor.swift        Long-press sheet for setting a tank's level
   FuelViewModel.swift     Fuel state, endurance math, persistence
   Tank.swift              Tank models and FuelHawk calibration curves

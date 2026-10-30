@@ -1,52 +1,54 @@
 import SwiftUI
 
+/// The tank a switch sheet is open for.
+private struct SwitchTarget: Identifiable {
+    let id: Int
+}
+
 struct ContentView: View {
     @StateObject private var viewModel = FuelViewModel()
-    @State private var selectedTankIndex: Int? = nil
-    @State private var usedInput: String = "5"
+    @State private var switchTarget: SwitchTarget? = nil
     @State private var showEditSheet = false
-    @State private var showSwitchSheet = false
-    @FocusState private var isInputFocused: Bool
+
+    private var isLow: Bool { viewModel.enduranceHours < 1 }
 
     @ViewBuilder
     private func tankButton(for index: Int) -> some View {
         let tank = viewModel.tanks[index]
         let percent = max(min(tank.gallons / tank.capacity, 1), 0)
-        let color = viewModel.editingTankIndex == index ? Color.red :
-            viewModel.lastActiveTankIndex == index ?
-            Color.blue : Color.gray
-        
-        VStack {
+        let isFeeding = viewModel.lastActiveTankIndex == index
+        let color: Color = viewModel.editingTankIndex == index ? .red :
+            isFeeding ? .accentColor : Color(.systemGray)
+
+        VStack(spacing: 8) {
             Button {
                 if viewModel.editingTankIndex != index {
-                    selectedTankIndex = index
-                    usedInput = "5"
-                    showSwitchSheet = true
+                    switchTarget = SwitchTarget(id: index)
                 }
             } label: {
                 ZStack {
                     Circle()
-                        .stroke(Color.gray.opacity(0.3), lineWidth: 3)
-                    
+                        .stroke(Color(.systemGray5), lineWidth: 6)
+
                     Circle()
                         .trim(from: 0, to: percent)
-                        .stroke(
-                            color,
-                            style: StrokeStyle(lineWidth: 3, lineCap: .round)
-                        )
+                        .stroke(color, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                         .rotationEffect(.degrees(-90))
-                    
-                    Text(String(format: "%.0f", viewModel.tanks[index].gallons))
-                        .font(.title)
+
+                    Text(String(format: "%.0f", tank.gallons))
+                        .font(.title2.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(.primary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
-                        .padding(6)
+                        .padding(8)
                 }
-                // Shrink to fit narrow screens (e.g. the outside display), up to 80pt.
-                .frame(maxWidth: 80)
+                // Shrink to fit narrow screens (e.g. the outside display), up to 66pt.
+                .frame(maxWidth: 66)
                 .aspectRatio(1, contentMode: .fit)
-                .padding(2)
+                .padding(3)
             }
+            .buttonStyle(.plain)
             .simultaneousGesture(
                 LongPressGesture(minimumDuration: 0.5)
                     .onEnded { _ in
@@ -54,101 +56,152 @@ struct ContentView: View {
                         showEditSheet = true
                     }
             )
-            
-            Text(viewModel.tanks[index].name)
-                .font(.caption)
+
+            VStack(spacing: 2) {
+                Text(tank.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(isFeeding ? Color.accentColor : .primary)
+                if isFeeding {
+                    Image(systemName: "triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(Color.accentColor)
+                        .accessibilityLabel("Feeding")
+                } else {
+                    Text("of \(String(format: "%.0f", tank.capacity))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity)
     }
 
-    var body: some View {
-        VStack(spacing: 30) {
-            Text("Fuel Tracker")
-                .font(.largeTitle)
-                .padding(.top)
+    private func statCard(_ title: String, gallons: Double) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(String(format: "%.1f", gallons))
+                    .font(.title.weight(.medium))
+                    .monospacedDigit()
+                Text("gal")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 14)
+        .padding(.horizontal, 18)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22))
+    }
 
-            HStack(spacing: 8) {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Text("CHEROKEE 235")
+                    .font(.footnote.weight(.semibold))
+                    .tracking(1)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Menu {
+                    Button("Reset Used", systemImage: "arrow.counterclockwise") {
+                        viewModel.totalUsedGallons = nil
+                        viewModel.saveState()
+                    }
+                    Button("All Tanks Full", systemImage: "fuelpump") {
+                        viewModel.fillAllTanks()
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.body.weight(.semibold))
+                        .frame(width: 44, height: 44)
+                        .background(Color(.secondarySystemGroupedBackground), in: Circle())
+                }
+                .accessibilityLabel("More")
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Endurance")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(viewModel.enduranceText)
+                        .font(.system(size: 88, weight: .thin))
+                        .monospacedDigit()
+                        .foregroundStyle(isLow ? .red : .primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                    Text("h")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+                Text("\(viewModel.enduranceMinusReserveText) after 45 min reserve")
+                    .font(.subheadline)
+                    .monospacedDigit()
+                    .foregroundStyle(isLow ? .red : .secondary)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .background(Color(.secondarySystemGroupedBackground), in: Capsule())
+                    .padding(.top, 6)
+            }
+
+            HStack(alignment: .top, spacing: 4) {
                 ForEach(viewModel.tanks.indices, id: \.self) { index in
+                    if index == viewModel.tanks.count / 2 {
+                        // Fuselage between the left and right wing tanks.
+                        Capsule()
+                            .fill(Color(.systemGray5))
+                            .frame(width: 2, height: 56)
+                            .padding(.horizontal, 4)
+                            .padding(.top, 8)
+                    }
                     tankButton(for: index)
                 }
             }
+            .padding(.vertical, 20)
+            .padding(.horizontal, 10)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 28))
 
-            HStack(spacing: 8) {
-                VStack(alignment: .center, spacing: 4) {
-                    Text("Used")
-                        .font(.caption)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .foregroundColor(.secondary)
-                    Text(String(format: "%.1f", viewModel.totalUsedGallons ?? 0))
-                        .font(.title)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                }
-                .frame(maxWidth: .infinity)
-                
-                VStack(alignment: .center, spacing: 4) {
-                    Text("Remaining")
-                        .font(.caption)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .foregroundColor(.secondary)
-                    Text(String(format: "%.1f", viewModel.totalRemainingGallons()))
-                        .font(.title)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                }
-                .frame(maxWidth: .infinity)
-           
-                VStack(alignment: .center, spacing: 4) {
-                    Text("Endurance")
-                        .font(.caption)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .foregroundColor(.secondary)
-                    Text(viewModel.enduranceText)
-                        .font(.title)
-                        .monospacedDigit()
-                        .foregroundColor(viewModel.enduranceHours < 1 ? .red : .primary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                }
-                .frame(maxWidth: .infinity)
-
-                VStack(alignment: .center, spacing: 4) {
-                    Text("-45 Reserve")
-                        .font(.caption)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .foregroundColor(.secondary)
-                    Text(viewModel.enduranceMinusReserveText)
-                        .font(.title)
-                        .monospacedDigit()
-                        .foregroundColor(viewModel.enduranceHours < 1 ? .red : .primary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                }
-                .frame(maxWidth: .infinity)
+            HStack(spacing: 12) {
+                statCard("Remaining", gallons: viewModel.totalRemainingGallons())
+                statCard("Used", gallons: viewModel.totalUsedGallons ?? 0)
             }
-            .padding(.vertical, 8)
-            
-            
-            Button("Reset Used"){
-                viewModel.totalUsedGallons = nil
-                viewModel.saveState()
-            }.buttonStyle(.bordered)
-            
+
             if !viewModel.lastSwitchText.isEmpty {
-                Text(viewModel.lastSwitchText)
-                    .font(.caption)
-                    .padding(.horizontal)
-                    .multilineTextAlignment(.center)
+                HStack(spacing: 14) {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 36, height: 36)
+                        .background(Color(.secondarySystemGroupedBackground), in: Circle())
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(viewModel.lastSwitchText)
+                            .font(.subheadline.weight(.medium))
+                        Text("at \(String(format: "%.1f", viewModel.totalUsedGallons ?? 0)) gal used")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.horizontal, 6)
             }
 
-            Spacer()
+            Spacer(minLength: 0)
+
+            Text("Tap a tank to switch · Hold to set its level")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
+        .background(Color(.systemGroupedBackground))
         .sheet(isPresented: $showEditSheet) {
             TankEditor(
                 tank: viewModel.tanks[viewModel.editingTankIndex!],
@@ -159,43 +212,10 @@ struct ContentView: View {
                 viewModel.stopEditingTank()
             }
         }
-        .sheet(isPresented: $showSwitchSheet) {
-                VStack(spacing: 20) {
-                    Text("Enter Fuel Used")
-                        .font(.headline)
-                        .padding(.top)
-                    
-                    TextField("Gallons", text: $usedInput)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .padding(.horizontal)
-                        .focused($isInputFocused)
-                    
-                    HStack(spacing: 20) {
-                        Button("Cancel") {
-                            showSwitchSheet = false
-                        }
-                        .buttonStyle(.bordered)
-                        
-                        Button("OK") {
-                            if let idx = selectedTankIndex,
-                               let usedVal = Double(usedInput) {
-                                viewModel.switchToTank(at: idx, newTotalUsed: usedVal)
-                            }
-                            showSwitchSheet = false
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-                    .padding(.bottom)
-                }
-                .presentationDetents([.medium])
-                .background(Color(.systemBackground))
-                .onAppear {
-                    usedInput = String(format:"%.1f", viewModel.totalUsedGallons == nil ? 0 : viewModel.totalUsedGallons! + 5)
-                    isInputFocused = true
-                }
-            }
-        .padding()
+        .sheet(item: $switchTarget) { target in
+            SwitchTankSheet(toIndex: target.id)
+                .environmentObject(viewModel)
+        }
         .onAppear {
             if viewModel.lastActiveTankIndex == nil {
                 viewModel.lastActiveTankIndex = 0

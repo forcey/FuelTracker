@@ -91,17 +91,19 @@ class FuelViewModel: ObservableObject {
         formatTime(hours: enduranceMinusReserveHours)
     }
 
+    /// "RM → LM · 8 min. ago", or empty before the first switch.
     var lastSwitchText: String {
         guard
             let from = lastFromIndex,
             let to = lastToIndex,
-            let used = totalUsedGallons,
+            totalUsedGallons != nil,
             let date = lastSwitchDate
         else { return "" }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
-        let relative = formatter.localizedString(for: date, relativeTo: currentDate)
-        return "Last switched from \(tanks[from].name) to \(tanks[to].name) \(relative) at \(String(format: "%.1f", used)) gal used"
+        // currentDate only ticks every 5s, so it can trail a fresh switch; avoid "in 0s".
+        let relative = formatter.localizedString(for: date, relativeTo: max(currentDate, date))
+        return "\(tanks[from].name) → \(tanks[to].name) · \(relative)"
     }
 
     func startEditingTank(index: Int) {

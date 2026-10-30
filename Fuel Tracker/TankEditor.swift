@@ -24,76 +24,121 @@ struct TankEditor: View {
         )
     }
 
+    private func setGallons(_ gallons: Double) {
+        tank.gallons = gallons
+        hasMovedSlider = false
+        showEditSheet = false
+        viewModel.saveState()
+    }
+
     var body: some View {
-        VStack(spacing: 10) {
-            HStack {
-                ForEach(tickerRange, id: \.self) { reading in
-                    let gallons = tank.convertFuelHawk(reading)
-                    Text(String(format: "%.0f", gallons))
-                        .frame(maxWidth: .infinity)
-                        .font(.caption2)
-                }
-                Text("gal").font(.caption2).frame(width: 35)
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("\(String(format: "%.0f", tank.capacity)) gal tank")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Text("Set \(tank.name) level")
+                    .font(.title.weight(.semibold))
             }
 
-            Slider(value: $sliderReading, in: 0...tank.maxFuelHawkReading, step: 0.1)
-                .onChange(of: sliderReading, initial: false) { _, _ in
-                    hasMovedSlider = true
-                }
-
-            HStack {
-                ForEach(tickerRange, id: \.self) { reading in
-                    Text(String(format: "%.0f", reading))
-                        .frame(maxWidth: .infinity)
-                        .font(.caption2)
-                }
-                Text("Fuel\nHawk").font(.caption2).frame(width: 35)
+            HStack(alignment: .firstTextBaseline) {
+                Text(String(format: "%.1f", tank.convertFuelHawk(sliderReading)))
+                    .font(.system(size: 52, weight: .light))
+                    .monospacedDigit()
+                Text("gal")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("FuelHawk \(String(format: "%.1f", sliderReading))")
+                    .font(.subheadline)
+                    .monospacedDigit()
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .background(Color(.tertiarySystemGroupedBackground), in: Capsule())
             }
 
-            Text(String(format: "%.1f FuelHawk / %.1f gallons", sliderReading, tank.convertFuelHawk(sliderReading)))
- 
-            HStack(spacing: 20) {
-                Button("Cancel") {
+            VStack(spacing: 8) {
+                HStack {
+                    ForEach(tickerRange, id: \.self) { reading in
+                        Text(String(format: "%.0f", tank.convertFuelHawk(reading)))
+                            .frame(maxWidth: .infinity)
+                    }
+                    Text("gal").frame(width: 35)
+                }
+
+                Slider(value: $sliderReading, in: 0...tank.maxFuelHawkReading, step: 0.1)
+                    .onChange(of: sliderReading, initial: false) { _, _ in
+                        hasMovedSlider = true
+                    }
+                    .padding(.trailing, 43)
+
+                HStack {
+                    ForEach(tickerRange, id: \.self) { reading in
+                        Text(String(format: "%.1f", reading))
+                            .frame(maxWidth: .infinity)
+                    }
+                    Text("FH").frame(width: 35)
+                }
+            }
+            .font(.caption)
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+
+            HStack(spacing: 12) {
+                Button {
                     showEditSheet = false
+                } label: {
+                    Text("Cancel").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
 
-                Button("Reset Amount") {
-                    tank.gallons = tank.convertFuelHawk(sliderReading)
-                    hasMovedSlider = false
-                    showEditSheet = false
-                    viewModel.saveState()
+                Button {
+                    setGallons(tank.convertFuelHawk(sliderReading))
+                } label: {
+                    Text("Set Level").fontWeight(.semibold).frame(maxWidth: .infinity)
                 }
-                .disabled(!hasMovedSlider)
                 .buttonStyle(.borderedProminent)
+                .disabled(!hasMovedSlider)
             }
-            
-            Divider()
-            
-            HStack(spacing: 10) {
-                Button("Empty") {
-                    tank.gallons = 0
-                    hasMovedSlider = false
-                    showEditSheet = false
-                    viewModel.saveState()
-                }.foregroundStyle(Color.red)
-                
-                Button("Full") {
-                    tank.gallons = tank.capacity
-                    hasMovedSlider = false
-                    showEditSheet = false
-                    viewModel.saveState()
-                }
-                Button("All Tanks Full") {
-                    viewModel.fillAllTanks()
-                    hasMovedSlider = false
-                    showEditSheet = false
-                }
-            }
-            .buttonStyle(.bordered)
-        }
-        .padding(.horizontal)
-        .presentationDetents([.medium])
+            .controlSize(.large)
 
+            Divider()
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Quick set")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 10) {
+                    Button {
+                        setGallons(0)
+                    } label: {
+                        Text("Empty").frame(maxWidth: .infinity)
+                    }
+                    .foregroundStyle(.red)
+
+                    Button {
+                        setGallons(tank.capacity)
+                    } label: {
+                        Text("Full").frame(maxWidth: .infinity)
+                    }
+
+                    Button {
+                        viewModel.fillAllTanks()
+                        hasMovedSlider = false
+                        showEditSheet = false
+                    } label: {
+                        Text("All Full").frame(maxWidth: .infinity)
+                    }
+                    .accessibilityLabel("All Tanks Full")
+                }
+                .buttonStyle(.bordered)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            }
+        }
+        .padding(20)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(Color(.secondarySystemGroupedBackground))
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
     }
 }
