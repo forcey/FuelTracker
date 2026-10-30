@@ -6,6 +6,7 @@ struct TankEditor: View {
     @EnvironmentObject var viewModel: FuelViewModel
     @State private var hasMovedSlider: Bool
     @State private var sliderReading: Double
+    @State private var contentHeight: CGFloat = 0
 
     init(tank: Tank, showEditSheet: Binding<Bool>) {
         self.tank = tank
@@ -32,6 +33,21 @@ struct TankEditor: View {
     }
 
     var body: some View {
+        // Size the sheet to its content so short screens (e.g. the outside
+        // display) don't clip it; scroll if it's taller than the screen.
+        ScrollView {
+            content
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                    contentHeight = $0
+                }
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .background(Color(.secondarySystemGroupedBackground))
+        .presentationDetents(contentHeight > 0 ? [.height(contentHeight)] : [.medium])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(String(format: "%.0f", tank.capacity)) gal tank")
@@ -136,9 +152,6 @@ struct TankEditor: View {
             }
         }
         .padding(20)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .background(Color(.secondarySystemGroupedBackground))
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.visible)
+        .padding(.top, 8)
     }
 }
