@@ -33,6 +33,8 @@ struct ContentView: View {
             Text(title)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             HStack(alignment: .firstTextBaseline, spacing: 5) {
                 ClockText(text: value, isTicking: ticking)
                     .font(.title2.weight(.medium))
@@ -47,29 +49,37 @@ struct ContentView: View {
             .lineLimit(1)
             .minimumScaleFactor(0.5)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
+        // Fill the whole row, so a taller neighbor doesn't leave gaps.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(.secondarySystemGroupedBackground))
     }
 
     @ViewBuilder
     private var stats: some View {
-        let columns = [GridItem(.flexible(), spacing: 1), GridItem(.flexible(), spacing: 1)]
-        LazyVGrid(columns: columns, spacing: 1) {
+        // A plain Grid sizes each row to its tallest cell; the 1 pt gaps are the dividers.
+        Grid(horizontalSpacing: 1, verticalSpacing: 1) {
             if viewModel.isInFlight {
-                statCell("Endurance", value: viewModel.enduranceText, warn: isLow,
-                         ticking: viewModel.isTimerRunning)
-                statCell("After 45 min reserve", value: viewModel.enduranceMinusReserveText, warn: isLow,
-                         ticking: viewModel.isTimerRunning)
-                statCell("Remaining", value: String(format: "%.1f", viewModel.totalRemainingGallons()), unit: "gal")
-                statCell("Used", value: String(format: "%.1f", viewModel.totalUsedGallons ?? 0), unit: "gal")
+                GridRow {
+                    statCell("Endurance", value: viewModel.enduranceText, warn: isLow,
+                             ticking: viewModel.isTimerRunning)
+                    statCell("After 45 min reserve", value: viewModel.enduranceMinusReserveText, warn: isLow,
+                             ticking: viewModel.isTimerRunning)
+                }
+                GridRow {
+                    statCell("Remaining", value: String(format: "%.1f", viewModel.totalRemainingGallons()), unit: "gal")
+                    statCell("Used", value: String(format: "%.1f", viewModel.totalUsedGallons ?? 0), unit: "gal")
+                }
             } else {
-                statCell("Fuel on board", value: String(format: "%.1f", viewModel.totalRemainingGallons()),
-                         unit: "of \(String(format: "%.0f", totalCapacity)) gal")
-                statCell("Endurance", value: viewModel.enduranceText, unit: "h")
+                GridRow {
+                    statCell("Fuel on board", value: String(format: "%.1f", viewModel.totalRemainingGallons()),
+                             unit: "of \(String(format: "%.0f", totalCapacity)) gal")
+                    statCell("Endurance", value: viewModel.enduranceText, unit: "h")
+                }
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
         .background(Color(.systemGray5))
         .clipShape(RoundedRectangle(cornerRadius: 22))
     }
@@ -125,7 +135,8 @@ struct ContentView: View {
                 .tracking(0.5)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-                .fixedSize()
+                .lineLimit(2)
+                .minimumScaleFactor(0.6)
             Button(action: toggleMode) {
                 VStack(spacing: 6) {
                     Image(systemName: "arrow.triangle.2.circlepath")
