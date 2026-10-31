@@ -14,6 +14,7 @@ A SwiftUI iPhone and iPad app for tracking fuel across the four tanks of a Piper
   - Both endurance times turn red when less than an hour is left.
 - **Last switch:** a line under the totals shows which tanks you last switched between, how long ago, and the fuel used at the time.
 - **More menu (•••):** **Reset Used** clears the used total, and **All Tanks Full** fills every tank.
+- **iPhone Duo:** the title and the ••• menu sit in the system's side bar instead of a row at the top of the screen.
 - **Setting tank levels:** long-press a tank to set its level. Drag the slider, type gallons, or type a FuelHawk dipstick reading; the other values follow, using that tank's calibration curve. The same sheet has **Empty**, **Full** and **All Tanks Full** buttons.
 - **Saved between launches:** tank levels and switch history are kept on the device.
 
