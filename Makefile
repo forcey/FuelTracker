@@ -6,13 +6,14 @@ SIMULATOR ?= iPhone 16
 
 # Pick the device kind with an extra goal: `make deploy iphone` or
 # `make deploy ipad`. With neither, use an iPhone, or an iPad if there's no
-# iPhone. A device counts if it's plugged in or paired over the network.
+# iPhone. A device counts if it's plugged in or paired over the network;
+# simulators never count.
 # Override with: make deploy DEVICE=<udid>
 KIND      := $(firstword $(filter iphone ipad,$(MAKECMDGOALS)))
 KIND_NAME := $(if $(filter iphone,$(KIND)),iPhone,$(if $(filter ipad,$(KIND)),iPad,iPhone or iPad))
 UDID_RE   := [0-9A-F]{8}-([0-9A-F]{16}|[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})
 DEVICE ?= $(shell xcrun devicectl list devices 2>/dev/null | \
-	awk -v kind="$(KIND)" '/connected|available \(paired\)/ { \
+	awk -v kind="$(KIND)" '/connected|available \(paired\)/ && !/simulated/ { \
 	         if (/iPhone/ && !phone) phone = $$0; else if (/iPad/ && !pad) pad = $$0 } \
 	     END { print (kind == "iphone" ? phone : kind == "ipad" ? pad : phone ? phone : pad) }' | \
 	grep -oE '$(UDID_RE)')
