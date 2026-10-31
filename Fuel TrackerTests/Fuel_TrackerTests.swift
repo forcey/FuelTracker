@@ -28,6 +28,17 @@ final class Fuel_TrackerTests: XCTestCase {
         XCTAssertEqual(tank.convertFuelHawk(reading), expected, accuracy: 0.0001)
     }
 
+    func testFuelHawkReadingInvertsConversion() {
+        for tank in [MainTank(name: "Main", initialGallons: 0), AuxTank(name: "Tip", initialGallons: 0)] {
+            XCTAssertEqual(tank.fuelHawkReading(forGallons: 0), 0)
+            XCTAssertEqual(tank.fuelHawkReading(forGallons: tank.capacity), tank.maxFuelHawkReading)
+            for reading in stride(from: 1.0, to: tank.maxFuelHawkReading, by: 1) {
+                let gallons = tank.convertFuelHawk(reading)
+                XCTAssertEqual(tank.fuelHawkReading(forGallons: gallons), reading, accuracy: 0.001)
+            }
+        }
+    }
+
     @MainActor
     func testSwitchToTankUpdatesState() {
         let vm = FuelViewModel()

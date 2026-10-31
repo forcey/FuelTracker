@@ -1,18 +1,26 @@
 import SwiftUI
 
 struct TankEditor: View {
+    private enum Field { case gallons, fuelHawk }
+
     let tank: Tank
     @Binding var showEditSheet: Bool
     @EnvironmentObject var viewModel: FuelViewModel
-    @State private var hasMovedSlider: Bool
-    @State private var sliderReading: Double
+    /// The level to set, in gallons.
+    @State private var gallons: Double
+    @State private var gallonsText: String
+    @State private var fuelHawkText: String
+    @State private var hasChanged = false
+    @State private var isInputValid = true
+    @FocusState private var focusedField: Field?
     @State private var contentHeight: CGFloat = 0
 
     init(tank: Tank, showEditSheet: Binding<Bool>) {
         self.tank = tank
         self._showEditSheet = showEditSheet
-        self._hasMovedSlider = State(initialValue: false)
-        self._sliderReading = State(initialValue: tank.maxFuelHawkReading / 2)
+        self._gallons = State(initialValue: tank.gallons)
+        self._gallonsText = State(initialValue: String(format: "%.1f", tank.gallons))
+        self._fuelHawkText = State(initialValue: String(format: "%.1f", tank.fuelHawkReading(forGallons: tank.gallons)))
     }
 
     private var tickerRange: [Double] {
@@ -25,9 +33,35 @@ struct TankEditor: View {
         )
     }
 
+    private var sliderReading: Binding<Double> {
+        Binding {
+            tank.fuelHawkReading(forGallons: gallons)
+        } set: { reading in
+            focusedField = nil
+            gallons = tank.convertFuelHawk(reading)
+            gallonsText = String(format: "%.1f", gallons)
+            fuelHawkText = String(format: "%.1f", reading)
+            isInputValid = true
+            hasChanged = true
+        }
+    }
+
+    /// Parses a typed number, sets `gallons` from it if it's in range, and
+    /// returns the new level so the other field can show it.
+    private func applyTyped(_ text: String, range: ClosedRange<Double>, toGallons: (Double) -> Double) -> Double? {
+        hasChanged = true
+        guard let value = Double(text), range.contains(value) else {
+            isInputValid = false
+            return nil
+        }
+        isInputValid = true
+        gallons = toGallons(value)
+        return gallons
+    }
+
     private func setGallons(_ gallons: Double) {
         tank.gallons = gallons
-        hasMovedSlider = false
+        hasChanged = false
         showEditSheet = false
         viewModel.saveState()
     }
@@ -58,19 +92,44 @@ struct TankEditor: View {
             }
 
             HStack(alignment: .firstTextBaseline) {
-                Text(String(format: "%.1f", tank.convertFuelHawk(sliderReading)))
+                TextField("0", text: $gallonsText)
+                    .keyboardType(.decimalPad)
+                    .focused($focusedField, equals: .gallons)
                     .font(.system(size: 52, weight: .light))
                     .monospacedDigit()
+                    .fixedSize()
+                    .accessibilityLabel("Gallons")
+                    .onChange(of: gallonsText) { _, text in
+                        guard focusedField == .gallons else { return }
+                        if let gallons = applyTyped(text, range: 0...tank.capacity, toGallons: { $0 }) {
+                            fuelHawkText = String(format: "%.1f", tank.fuelHawkReading(forGallons: gallons))
+                        }
+                    }
                 Text("gal")
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("FuelHawk \(String(format: "%.1f", sliderReading))")
-                    .font(.subheadline)
-                    .monospacedDigit()
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 12)
-                    .background(Color(.tertiarySystemGroupedBackground), in: Capsule())
+                HStack(spacing: 4) {
+                    Text("FuelHawk")
+                    TextField("0", text: $fuelHawkText)
+                        .keyboardType(.decimalPad)
+                        .focused($focusedField, equals: .fuelHawk)
+                        .monospacedDigit()
+                        .fixedSize()
+                        .accessibilityLabel("FuelHawk reading")
+                        .onChange(of: fuelHawkText) { _, text in
+                            guard focusedField == .fuelHawk else { return }
+                            if let gallons = applyTyped(text, range: 0...tank.maxFuelHawkReading, toGallons: tank.convertFuelHawk) {
+                                gallonsText = String(format: "%.1f", gallons)
+                            }
+                        }
+                }
+                .font(.subheadline)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .background(Color(.tertiarySystemGroupedBackground), in: Capsule())
+                .onTapGesture { focusedField = .fuelHawk }
             }
+            .foregroundStyle(isInputValid ? Color.primary : Color.red)
 
             VStack(spacing: 8) {
                 HStack {
@@ -81,10 +140,7 @@ struct TankEditor: View {
                     Text("gal").frame(width: 35)
                 }
 
-                Slider(value: $sliderReading, in: 0...tank.maxFuelHawkReading, step: 0.1)
-                    .onChange(of: sliderReading, initial: false) { _, _ in
-                        hasMovedSlider = true
-                    }
+                Slider(value: sliderReading, in: 0...tank.maxFuelHawkReading, step: 0.1)
                     .padding(.trailing, 43)
 
                 HStack {
@@ -108,12 +164,12 @@ struct TankEditor: View {
                 .buttonStyle(.bordered)
 
                 Button {
-                    setGallons(tank.convertFuelHawk(sliderReading))
+                    setGallons(gallons)
                 } label: {
                     Text("Set Level").fontWeight(.semibold).frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(!hasMovedSlider)
+                .disabled(!hasChanged || !isInputValid)
             }
             .controlSize(.large)
 
@@ -139,7 +195,7 @@ struct TankEditor: View {
 
                     Button {
                         viewModel.fillAllTanks()
-                        hasMovedSlider = false
+                        hasChanged = false
                         showEditSheet = false
                     } label: {
                         Text("All Full").frame(maxWidth: .infinity)
