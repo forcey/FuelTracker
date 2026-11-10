@@ -10,9 +10,15 @@ class FuelViewModel: ObservableObject {
         var lastToIndex: Int?
         var lastSwitchDate: Date?
         var totalUsedGallons: Double?
+        /// When this state was saved, so the newest copy wins between
+        /// this device's UserDefaults and iCloud.
+        var savedAt: Date?
     }
 
     private let storageKey = "FuelTrackerState"
+    /// Synced to the user's other devices through iCloud key-value storage.
+    private let cloud = NSUbiquitousKeyValueStore.default
+    private var lastSavedAt: Date = .distantPast
 
     @Published var tanks: [Tank] = [
         AuxTank(name: "LT", initialGallons: 12),
@@ -30,6 +36,7 @@ class FuelViewModel: ObservableObject {
 
     private var timerSubscription: AnyCancellable?
     private var tankSubscriptions: [AnyCancellable] = []
+    private var cloudSubscription: AnyCancellable?
 
     init() {
         timerSubscription = Timer.publish(every: 5, on: .main, in: .common)
@@ -45,6 +52,13 @@ class FuelViewModel: ObservableObject {
                 self?.objectWillChange.send()
             }
         }
+        cloudSubscription = NotificationCenter.default
+            .publisher(for: NSUbiquitousKeyValueStore.didChangeExternallyNotification, object: cloud)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.loadState()
+            }
+        cloud.synchronize()
         loadState()
     }
 
@@ -130,30 +144,48 @@ class FuelViewModel: ObservableObject {
     }
 
     func saveState() {
+        let now = Date()
         let state = StoredState(
             tankGallons: tanks.map { $0.gallons },
             lastActiveTankIndex: lastActiveTankIndex,
             lastFromIndex: lastFromIndex,
             lastToIndex: lastToIndex,
             lastSwitchDate: lastSwitchDate,
-            totalUsedGallons: totalUsedGallons
+            totalUsedGallons: totalUsedGallons,
+            savedAt: now
         )
-        if let data = try? JSONEncoder().encode(state) {
-            UserDefaults.standard.set(data, forKey: storageKey)
-        }
+        guard let data = try? JSONEncoder().encode(state) else { return }
+        lastSavedAt = now
+        UserDefaults.standard.set(data, forKey: storageKey)
+        cloud.set(data, forKey: storageKey)
     }
 
+    /// Loads the newer of this device's saved state and iCloud's, if it's
+    /// newer than what's already showing.
     func loadState() {
-        guard let data = UserDefaults.standard.data(forKey: storageKey) else { return }
-        if let state = try? JSONDecoder().decode(StoredState.self, from: data) {
-            for (index, gallons) in state.tankGallons.enumerated() where tanks.indices.contains(index) {
-                tanks[index].gallons = gallons
-            }
-            lastActiveTankIndex = state.lastActiveTankIndex
-            lastFromIndex = state.lastFromIndex
-            lastToIndex = state.lastToIndex
-            lastSwitchDate = state.lastSwitchDate
-            totalUsedGallons = state.totalUsedGallons
+        let candidates = [
+            UserDefaults.standard.data(forKey: storageKey),
+            cloud.data(forKey: storageKey)
+        ].compactMap { $0.flatMap { try? JSONDecoder().decode(StoredState.self, from: $0) } }
+        guard
+            let state = candidates.max(by: { ($0.savedAt ?? .distantPast) < ($1.savedAt ?? .distantPast) }),
+            (state.savedAt ?? .distantPast) > lastSavedAt || lastSavedAt == .distantPast
+        else { return }
+
+        for (index, gallons) in state.tankGallons.enumerated() where tanks.indices.contains(index) {
+            tanks[index].gallons = gallons
+        }
+        lastActiveTankIndex = state.lastActiveTankIndex
+        lastFromIndex = state.lastFromIndex
+        lastToIndex = state.lastToIndex
+        lastSwitchDate = state.lastSwitchDate
+        totalUsedGallons = state.totalUsedGallons
+        currentDate = Date()
+        lastSavedAt = state.savedAt ?? .distantPast
+
+        // Keep the local copy current so it's there offline.
+        if let data = try? JSONEncoder().encode(state) {
+            UserDefaults.standard.set(data, forKey: storageKey)
         }
     }
 
